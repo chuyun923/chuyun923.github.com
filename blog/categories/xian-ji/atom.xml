@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[楚云之南]]></title>
-  <link href="http://chuyun923.github.io/atom.xml" rel="self"/>
+  <title><![CDATA[Category: 闲记 | 楚云之南]]></title>
+  <link href="http://chuyun923.github.io/blog/categories/xian-ji/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
   <updated>2014-11-22T19:08:53+08:00</updated>
   <id>http://chuyun923.github.io/</id>
@@ -12,15 +12,6 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
-  
-  <entry>
-    <title type="html"><![CDATA[Hah]]></title>
-    <link href="http://chuyun923.github.io/blog/2014/11/22/hah/"/>
-    <updated>2014-11-22T17:40:01+08:00</updated>
-    <id>http://chuyun923.github.io/blog/2014/11/22/hah</id>
-    <content type="html"><![CDATA[
-]]></content>
-  </entry>
   
   <entry>
     <title type="html"><![CDATA[使用Octopress写博客的个性配置]]></title>

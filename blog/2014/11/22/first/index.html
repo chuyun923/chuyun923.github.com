@@ -5,12 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>First - 楚云之南</title>
+  <title>使用Octopress写博客的个性配置 - 楚云之南</title>
   <meta name="author" content="楚云">
 
   
-  <meta name="description" content="hahdfdsfh
-">
+  <meta name="description" content="配置_config.yml 在首页只显示部分文章，而不是全文，可以通过_config.yml来设置，该文件中使用键值对来存储，键名: value中间的空格不能少。excerpt_separator，摘要标志，如果一篇文章中出现了这个标志，表明此文章在首页现实时需要采用摘要的模式，默认为&lt &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -69,7 +68,7 @@
   
   <header>
     
-      <h1 class="entry-title">First</h1>
+      <h1 class="entry-title">使用Octopress写博客的个性配置</h1>
     
     
       <p class="meta">
@@ -85,7 +84,38 @@
   </header>
 
 
-<div class="entry-content"><p>hahdfdsfh</p>
+<div class="entry-content"><!--more-->
+
+
+<h2>配置_config.yml</h2>
+
+<ul>
+<li>在首页只显示部分文章，而不是全文，可以通过<code>_config.yml</code>来设置，该文件中使用键值对来存储，<strong>键名: value</strong>中间的空格不能少。<code>excerpt_separator</code>，摘要标志，如果一篇文章中出现了这个标志，表明此文章在首页现实时需要采用摘要的模式，默认为<code>&lt;!--more--&gt;</code>。<code>excerpt_link</code>为读更多的link显示的文字，我们可以设置为&#8221;阅读全文&#8221;。</li>
+</ul>
+
+
+<h2>新建博客</h2>
+
+<ul>
+<li><p>设置使用指定的编辑器自动打开新建的blog。现在每次新建一篇blog，都要跑到<code>/source_posts</code>里面去打开，先到Rakefile文件里面的<code>## -- Misc Configs -- ##</code>注释下，在<code>server_port</code>下面新增一个键值对<code>editor = "open -a Mou"</code>。<br />
+然后在文件中找到<code>new_post</code>任务，在最后一个<code>end</code>之前添加如下代码：</p>
+
+<pre><code>  if #{editor}
+      system "#{editor} #{filename}"
+  end
+</code></pre>
+
+<p>如此一来，每次<code>rake new_post</code>都会自动打开Mou编辑器。</p></li>
+<li><p>preview的时候自动打开浏览器预览。还是在<code>Rakefile</code>中，找到preview任务，加入代码</p>
+
+<pre><code>  system "sleep 2; open http://localhost:#{server_port}/"
+</code></pre></li>
+</ul>
+
+
+<h2>博客界面</h2>
+
+<h2>#</h2>
 </div>
 
 
@@ -104,6 +134,12 @@
 <time class='entry-date' datetime='2014-11-22T14:09:59+08:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>22</span><span class='date-suffix'>nd</span>, <span class='date-year'>2014</span></span> <span class='time'>2:09 pm</span></time>
       
 
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/xian-ji/'>闲记</a>
+  
+</span>
+
 
     </p>
     
@@ -113,11 +149,31 @@
   
   
   
+  
+  <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style_32x32">
+	<a class="jiathis_button_qzone"></a>
+	<a class="jiathis_button_tsina"></a>
+	<a class="jiathis_button_tqq"></a>
+	<a class="jiathis_button_weixin"></a>
+	<a class="jiathis_button_renren"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+<!-- UY BEGIN -->
+<div id="uyan_frame"></div>
+<script type="text/javascript" src="http://v2.uyan.cc/code/uyan.js"></script>
+<!-- UY END -->
+  
 </div>
 
     
     <p class="meta">
       
+      
+        <a class="basic-alignment right" href="/blog/2014/11/22/hah/" title="Next Post: hah">hah &raquo;</a>
       
     </p>
   </footer>
@@ -132,7 +188,11 @@
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2014/11/22/first/">First</a>
+        <a href="/blog/2014/11/22/hah/">Hah</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/11/22/first/">使用Octopress写博客的个性配置</a>
       </li>
     
   </ul>
@@ -141,7 +201,12 @@
 
 
 
-
+<section>
+    <h1>Categories</h1>
+    <ul id="categories">
+        {% category_list %}
+    </ul>
+</section>
   
 </aside>
 
