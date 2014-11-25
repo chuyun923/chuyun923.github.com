@@ -4,7 +4,7 @@
   <title><![CDATA[楚云之南]]></title>
   <link href="http://chuyun923.github.io/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2014-11-25T17:20:11+08:00</updated>
+  <updated>2014-11-25T17:22:57+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -19,6 +19,9 @@
     <updated>2014-11-25T16:21:04+08:00</updated>
     <id>http://chuyun923.github.io/blog/2014/11/25/Android构建内测版本程序</id>
     <content type="html"><![CDATA[<p>在开发应用的过程中，有时候需要比较当前线上版本和正在开发中的版本差异，目前的做法只能是在两个不同的设备上面安装线上版本和开发中的版本，因为当前版本在调试过程中会覆盖旧版本。本文通过使用gradle来构建android应用变种版本，通过配置build type和productFlavors来进行实践，结果不完全尽如人意，但是提供了同一个程序不同变种在一个设备上共存的一种实践。</p>
+
+<!--more-->
+
 
 <h2>applicationID VS package</h2>
 
