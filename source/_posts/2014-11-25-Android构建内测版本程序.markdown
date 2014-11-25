@@ -1,0 +1,35 @@
+---
+layout: post
+title: "Android构建内测版本程序"
+date: 2014-11-25 16:21:04 +0800
+comments: true
+categories:Android 
+---
+在开发应用的过程中，有时候需要比较当前线上版本和正在开发中的版本差异，目前的做法只能是在两个不同的设备上面安装线上版本和开发中的版本，因为当前版本在调试过程中会覆盖旧版本。本文通过使用gradle来构建android应用变种版本，通过配置build type和productFlavors来进行实践，结果不完全尽如人意，但是提供了同一个程序不同变种在一个设备上共存的一种实践。
+##applicationID VS package
+在android的manifest文件中，我们可以配置一个package字段，这个字段主要有两个作用：
+
+1. 作为包名指出当前应用的R文件所在路径和组件所在路径。所以我们在manifest文件中可以使用相对路径来配置activity等。
+2. 作为应用的唯一标识在系统中存在，此时，其作用==applicationID。 
+
+要使同一个应用的不同版本在设备上共存的前提是它们具有不同的applicationID。
+## buildTypes VS productFlavors
+要修改applicationId可以通过配置buildTypes中的applicationIdSuffix属性，起作用是将applicationId设置为package加上你所配置的后缀。此时，面临的第一个问题是我可能需要对debug版本和线上版本进行区分，比如不同的app图标，app名字以便在launcher里面进行区分。此时，productFlavor可以帮上忙，productFlavor提供了替换程序资源文件的功能，只需要在当前项目的src目录下新建一个flavor目录，在里面覆写资源即可。<br />到此，我们可以构建出一个用于开发的内测版本，它不会覆盖手机上已经安装的线上版本。
+## 一些尝试
+通过第二节，我们可以打出一个内测包，但是还是存在如下问题：
+
+1. 两个版本中大部分的隐式跳转都一样，你能忍受在应用内随便点击一个页面，就会弹出选择框的情况？
+2. 如果应用中注册了Provider，将会被禁止安装第二个app，因为Provider不能重名
+
+针对第一个问题，我目前的解决方案是将actvity声明的data字段全部引用资源文件，然后通过flavor去为debug版本修改data中的implict_intent_host字段。
+
+		<data android:host="@string/implict_intent_host"
+             android:path="/movie"
+             android:scheme="@string/implict_intent_scheme" />
+             
+     
+这样，debug版本的activity的data将会改变，由于之前项目在创建隐式跳转都集中管理了，那么只需要修改创建的隐式intent  Uri的host部分从资源文件读取即可。但是这个方案存在一些问题：从第三方(如html5页面)的跳转就会失效，因为内测版本的intent host已经不再是公约的版本，这个暂时还没有解决方案来处理。。。，小小的遗憾
+
+第二个问题好解决，只需要将provider的authorities字段区分一下即可，同样也会带来一点点问题，比如一个公司内部存在多个app，之间通过provider来提供数据的话，那么这个provider应该对于其它app是已知的，修改authorities之后，其他app会找不到这个provider。
+##总结
+以上提到的方法虽然存在一些问题，但是从目前来看只要注意到之前提到的这些内容，应该不会给开发带来太大的困扰，同时我们最好提供一个默认的flovar，它不定义任何特殊的行为，那么通过gradle assembleNormalDebug和我们正常打出来的debug包没有任何差别。

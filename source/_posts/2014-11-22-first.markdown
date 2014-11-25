@@ -21,6 +21,3 @@ categories: 闲记
 + preview的时候自动打开浏览器预览。还是在`Rakefile`中，找到preview任务，加入代码
 
 		system "sleep 2; open http://localhost:#{server_port}/"
-
-##博客界面
-###
