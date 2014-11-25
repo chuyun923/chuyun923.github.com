@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[楚云之南]]></title>
-  <link href="http://chuyun923.github.io/atom.xml" rel="self"/>
+  <title><![CDATA[Category: Android | 楚云之南]]></title>
+  <link href="http://chuyun923.github.io/blog/categories/android/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
   <updated>2014-11-25T17:20:11+08:00</updated>
   <id>http://chuyun923.github.io/</id>
@@ -60,42 +60,6 @@
 <h2>总结</h2>
 
 <p>以上提到的方法虽然存在一些问题，但是从目前来看只要注意到之前提到的这些内容，应该不会给开发带来太大的困扰，同时我们最好提供一个默认的flovar，它不定义任何特殊的行为，那么通过gradle assembleNormalDebug和我们正常打出来的debug包没有任何差别。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[使用Octopress写博客的个性配置]]></title>
-    <link href="http://chuyun923.github.io/blog/2014/11/22/first/"/>
-    <updated>2014-11-22T14:09:59+08:00</updated>
-    <id>http://chuyun923.github.io/blog/2014/11/22/first</id>
-    <content type="html"><![CDATA[<!--more-->
-
-
-<h2>配置_config.yml</h2>
-
-<ul>
-<li>在首页只显示部分文章，而不是全文，可以通过<code>_config.yml</code>来设置，该文件中使用键值对来存储，<strong>键名: value</strong>中间的空格不能少。<code>excerpt_separator</code>，摘要标志，如果一篇文章中出现了这个标志，表明此文章在首页现实时需要采用摘要的模式，默认为<code>&lt;!--more--&gt;</code>。<code>excerpt_link</code>为读更多的link显示的文字，我们可以设置为&#8221;阅读全文&#8221;。</li>
-</ul>
-
-
-<h2>新建博客</h2>
-
-<ul>
-<li><p>设置使用指定的编辑器自动打开新建的blog。现在每次新建一篇blog，都要跑到<code>/source_posts</code>里面去打开，先到Rakefile文件里面的<code>## -- Misc Configs -- ##</code>注释下，在<code>server_port</code>下面新增一个键值对<code>editor = "open -a Mou"</code>。<br />
-然后在文件中找到<code>new_post</code>任务，在最后一个<code>end</code>之前添加如下代码：</p>
-
-<pre><code>  if #{editor}
-      system "#{editor} #{filename}"
-  end
-</code></pre>
-
-<p>如此一来，每次<code>rake new_post</code>都会自动打开Mou编辑器。</p></li>
-<li><p>preview的时候自动打开浏览器预览。还是在<code>Rakefile</code>中，找到preview任务，加入代码</p>
-
-<pre><code>  system "sleep 2; open http://localhost:#{server_port}/"
-</code></pre></li>
-</ul>
-
 ]]></content>
   </entry>
   
