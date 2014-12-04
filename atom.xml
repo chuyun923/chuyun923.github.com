@@ -4,7 +4,7 @@
   <title><![CDATA[楚云之南]]></title>
   <link href="http://chuyun923.github.io/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2014-11-25T17:22:57+08:00</updated>
+  <updated>2014-12-04T16:52:25+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -12,6 +12,46 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Java中的泛型方法]]></title>
+    <link href="http://chuyun923.github.io/blog/2014/12/04/javazhong-de-fan-xing-fang-fa/"/>
+    <updated>2014-12-04T16:36:56+08:00</updated>
+    <id>http://chuyun923.github.io/blog/2014/12/04/javazhong-de-fan-xing-fang-fa</id>
+    <content type="html"><![CDATA[<p>在通过反射获取类的私有域时希望写一个方法，可以指定一个域的名字和域的类型，可以返回指定类型的对象。</p>
+
+<!--more-->
+
+
+<p>方法实现如下：</p>
+
+<pre><code>/**
+ * 获取一个类的私有域
+ * @param fromClass 私有域所在的类
+ * @param toClass 私有域的类型
+ * @param fieldName 域的名字
+ * @param &lt;T&gt;
+ * @return
+ */
+private &lt;T&gt; T getPrivateFiled(Class&lt;T&gt; fromClass,Class&lt;T&gt; toClass, String fieldName) {
+    T result = null;
+    try {
+        Field field = fromClass.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        result = (T) field.get(this);
+    } catch (NoSuchFieldException e) {
+    } catch (IllegalAccessException e) {
+    }
+    return result;
+}
+</code></pre>
+
+<p>泛型方法的结构如下：<br />
+<img src="file:///Users/pengliang/Documents/java%E6%B3%9B%E5%9E%8B%E6%96%B9%E6%B3%95.png" alt="image" />
+<br />
+值得说明的是，声明泛型方法首先需要在返回值前面用<code>&lt;T&gt;</code>表明这是一个泛型方法，持有一个泛型。当然，一般来说我们需要在参数中传入一个class对象，不然函数的泛型没有任何意义了。。。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Android构建内测版本程序]]></title>
