@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Java | 楚云之南]]></title>
   <link href="http://chuyun923.github.io/blog/categories/java/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2014-12-04T16:52:25+08:00</updated>
+  <updated>2014-12-04T17:01:45+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -47,7 +47,7 @@ private &lt;T&gt; T getPrivateFiled(Class&lt;T&gt; fromClass,Class&lt;T&gt; toCl
 </code></pre>
 
 <p>泛型方法的结构如下：<br />
-<img src="file:///Users/pengliang/Documents/java%E6%B3%9B%E5%9E%8B%E6%96%B9%E6%B3%95.png" alt="image" />
+<img src="http://images.cnblogs.com/cnblogs_com/CSU-PL/637624/o_java%e6%b3%9b%e5%9e%8b%e6%96%b9%e6%b3%95.png" alt="image" />
 <br />
 值得说明的是，声明泛型方法首先需要在返回值前面用<code>&lt;T&gt;</code>表明这是一个泛型方法，持有一个泛型。当然，一般来说我们需要在参数中传入一个class对象，不然函数的泛型没有任何意义了。。。</p>
 ]]></content>
