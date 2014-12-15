@@ -9,7 +9,7 @@
   <meta name="author" content="楚云">
 
   
-  <meta name="description" content="在通过反射获取类的私有域时希望写一个方法，可以指定一个域的名字和域的类型，可以返回指定类型的对象。 方法实现如下： /** * 获取一个类的私有域 * @param fromClass 私有域所在的类 * @param toClass 私有域的类型 * @param fieldName 域的名字 &hellip;">
+  <meta name="description" content="在通过反射获取类的私有域时希望写一个方法，可以指定一个域的名字和域的类型，可以返回指定类型的对象。 方法实现如下： /** * 获取一个类的私有域 * @param fromClass 私有域所在的类 * @param fieldName 域的名字 * @param &lt;T&gt; * @ &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -94,12 +94,11 @@
 <pre><code>/**
  * 获取一个类的私有域
  * @param fromClass 私有域所在的类
- * @param toClass 私有域的类型
  * @param fieldName 域的名字
  * @param &lt;T&gt;
  * @return
  */
-private &lt;T&gt; T getPrivateFiled(Class&lt;T&gt; fromClass,Class&lt;T&gt; toClass, String fieldName) {
+private &lt;T&gt; T getPrivateFiled(Class&lt;T&gt; fromClass, String fieldName) {
     T result = null;
     try {
         Field field = fromClass.getDeclaredField(fieldName);

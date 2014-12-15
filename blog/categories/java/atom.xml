@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Java | 楚云之南]]></title>
   <link href="http://chuyun923.github.io/blog/categories/java/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2014-12-14T22:03:30+08:00</updated>
+  <updated>2014-12-15T11:11:42+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -28,12 +28,11 @@
 <pre><code>/**
  * 获取一个类的私有域
  * @param fromClass 私有域所在的类
- * @param toClass 私有域的类型
  * @param fieldName 域的名字
  * @param &lt;T&gt;
  * @return
  */
-private &lt;T&gt; T getPrivateFiled(Class&lt;T&gt; fromClass,Class&lt;T&gt; toClass, String fieldName) {
+private &lt;T&gt; T getPrivateFiled(Class&lt;T&gt; fromClass, String fieldName) {
     T result = null;
     try {
         Field field = fromClass.getDeclaredField(fieldName);
