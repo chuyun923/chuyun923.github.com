@@ -9,8 +9,7 @@
   <meta name="author" content="楚云">
 
   
-  <meta name="description" content="Request URI URI用来表示一个HTTP请求的目标，它由protocol scheme,host名字,port(可选)，resource path,query(可选)和fragment(可选)组成。对应的例子就是：
-&ldquo;http://www.google.com/search? &hellip;">
+  <meta name="description" content="Http协议是在开发中使用最多的网络协议，大部分的网络接口都是通过Http来设计。在Android中提供了两种Http客户端，HttpClient和HttpUrlConnetion。其中后者在低版本存在某些问题，但是HttpClient尽管功能强大，但使用麻烦，接口众多， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -85,7 +84,12 @@
   </header>
 
 
-<div class="entry-content"><h2>Request URI</h2>
+<div class="entry-content"><p>Http协议是在开发中使用最多的网络协议，大部分的网络接口都是通过Http来设计。在Android中提供了两种Http客户端，HttpClient和HttpUrlConnetion。其中后者在低版本存在某些问题，但是HttpClient尽管功能强大，但使用麻烦，接口众多，本文主要是简单介绍HttpClient中使用的一些概念。</p>
+
+<!--more-->
+
+
+<h2>Request URI</h2>
 
 <p>URI用来表示一个HTTP请求的目标，它由protocol scheme,host名字,port(可选)，resource path,query(可选)和fragment(可选)组成。对应的例子就是：<br />
 &ldquo;<a href="http://www.google.com/search?hl=en&amp;q=httpclient&amp;btnG=Google+Search&amp;aq=f&amp;oq=">http://www.google.com/search?hl=en&amp;q=httpclient&amp;btnG=Google+Search&amp;aq=f&amp;oq=</a>&rdquo;

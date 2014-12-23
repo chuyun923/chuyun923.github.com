@@ -4,7 +4,7 @@
   <title><![CDATA[Category: 网络协议/http | 楚云之南]]></title>
   <link href="http://chuyun923.github.io/blog/categories/wang-luo-xie-yi-slash-http/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2014-12-23T10:01:41+08:00</updated>
+  <updated>2014-12-23T10:09:11+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -18,7 +18,12 @@
     <link href="http://chuyun923.github.io/blog/2014/12/16/httpclient/"/>
     <updated>2014-12-16T12:20:26+08:00</updated>
     <id>http://chuyun923.github.io/blog/2014/12/16/httpclient</id>
-    <content type="html"><![CDATA[<h2>Request URI</h2>
+    <content type="html"><![CDATA[<p>Http协议是在开发中使用最多的网络协议，大部分的网络接口都是通过Http来设计。在Android中提供了两种Http客户端，HttpClient和HttpUrlConnetion。其中后者在低版本存在某些问题，但是HttpClient尽管功能强大，但使用麻烦，接口众多，本文主要是简单介绍HttpClient中使用的一些概念。</p>
+
+<!--more-->
+
+
+<h2>Request URI</h2>
 
 <p>URI用来表示一个HTTP请求的目标，它由protocol scheme,host名字,port(可选)，resource path,query(可选)和fragment(可选)组成。对应的例子就是：<br />
 &ldquo;<a href="http://www.google.com/search?hl=en&amp;q=httpclient&amp;btnG=Google+Search&amp;aq=f&amp;oq=">http://www.google.com/search?hl=en&amp;q=httpclient&amp;btnG=Google+Search&amp;aq=f&amp;oq=</a>&rdquo;
