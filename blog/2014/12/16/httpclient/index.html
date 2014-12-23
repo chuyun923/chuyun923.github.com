@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>楚云之南</title>
+  <title>HttpClient - 楚云之南</title>
   <meta name="author" content="楚云">
 
   
-  <meta name="description" content="本文参考自官方文档：https://developer.android.com/guide/topics/ui/menus.html Android为了维护app之间一个统一的操作习惯，提供了Menus来处理用户和Activity之间的一些交互。但是在不同的系统版本上面推荐的Menu不一样。 &hellip;">
+  <meta name="description" content="Request URI URI用来表示一个HTTP请求的目标，它由protocol scheme,host名字,port(可选)，resource path,query(可选)和fragment(可选)组成。对应的例子就是：
+&ldquo;http://www.google.com/search? &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://chuyun923.github.io">
+  <link rel="canonical" href="http://chuyun923.github.io/blog/2014/12/16/httpclient">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="楚云之南" type="application/atom+xml">
@@ -63,51 +64,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2014/12/19/androidzhi-cai-dan/">Android之菜单</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-12-19T17:19:36+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>19</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>5:19 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>本文参考自官方文档：<a href="https://developer.android.com/guide/topics/ui/menus.html">https://developer.android.com/guide/topics/ui/menus.html</a></p>
-
-<p>Android为了维护app之间一个统一的操作习惯，提供了Menus来处理用户和Activity之间的一些交互。但是在不同的系统版本上面推荐的Menu不一样。比如在android 3.0以下，由于Google会要求所有设备生产商提供一个菜单的实体键，所以在3.0一下菜单的主要弹出方式就是点击菜单实体键，弹出6个条目的菜单面板。在3.0以后，引入ActionBar，打开菜单行为转变成点击ActionBar上面的overflow按钮。这两种菜单面板的操作一般都是影响到整个app的操作。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/12/19/androidzhi-cai-dan/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/16/httpclient/">HttpClient</a></h1>
+      <h1 class="entry-title">HttpClient</h1>
     
     
       <p class="meta">
@@ -123,7 +85,7 @@
   </header>
 
 
-  <div class="entry-content"><h2>Request URI</h2>
+<div class="entry-content"><h2>Request URI</h2>
 
 <p>URI用来表示一个HTTP请求的目标，它由protocol scheme,host名字,port(可选)，resource path,query(可选)和fragment(可选)组成。对应的例子就是：<br />
 &ldquo;<a href="http://www.google.com/search?hl=en&amp;q=httpclient&amp;btnG=Google+Search&amp;aq=f&amp;oq=">http://www.google.com/search?hl=en&amp;q=httpclient&amp;btnG=Google+Search&amp;aq=f&amp;oq=</a>&rdquo;
@@ -178,159 +140,72 @@ apache的HttpClient中(注意，这里将这个apache对于Http的客户端实�
 
 <p>在HttpClient中，有两类异常：I/O Exception 和 HttpException。前者不是致命的错误，而且也可以恢复，而后者则相反。</p>
 </div>
-  
-  
 
 
-    </article>
-  
-  
-    <article>
+  <footer>
+    <p class="meta">
       
-  <header>
+  
+
+<span class="byline author vcard">Posted by <span class="fn">楚云</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-12-16T12:20:26+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>16</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>12:20 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/wang-luo-xie-yi-slash-http/'>网络协议/http</a>
+  
+</span>
+
+
+    </p>
     
-      <h1 class="entry-title"><a href="/blog/2014/12/14/geniousadapter-kuai-su-gou-jian-adapter/">geniousadapter,快速构建Adapter</a></h1>
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://chuyun923.github.io/blog/2014/12/16/httpclient/" data-via="" data-counturl="http://chuyun923.github.io/blog/2014/12/16/httpclient/" >Tweet</a>
+  
+  
+  
+  
+  <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style_32x32">
+	<a class="jiathis_button_qzone"></a>
+	<a class="jiathis_button_tsina"></a>
+	<a class="jiathis_button_tqq"></a>
+	<a class="jiathis_button_weixin"></a>
+	<a class="jiathis_button_renren"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	<a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+<!-- UY BEGIN -->
+<div id="uyan_frame"></div>
+<script type="text/javascript" src="http://v2.uyan.cc/code/uyan.js?uid=1987763"></script>
+<!-- UY END -->
+  
+</div>
+
     
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-12-14T20:28:32+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>8:28 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>项目地址：<a href="https://github.com/chuyun923/ingenious-adapter"><strong>geniousadapter</strong></a><br/>
-前面的话：本项目的原型是<a href="https://github.com/JoanZapata/base-adapter-helper">QuickAdapter</a>，它们的思路基本一致，但本项目的优势在于：</p>
-
-<ul>
-<li>支持AdapterView存在多个layout类型</li>
-<li>可配置图片加载缓存库</li>
-</ul>
-
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/12/14/geniousadapter-kuai-su-gou-jian-adapter/" title="Previous Post: geniousadapter,快速构建Adapter">&laquo; geniousadapter,快速构建Adapter</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2014/12/19/androidzhi-cai-dan/" title="Next Post: Android之菜单">Android之菜单 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
 
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/12/14/geniousadapter-kuai-su-gou-jian-adapter/">展开全文</a>
-    </footer>
-  
 
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/04/javazhong-de-fan-xing-fang-fa/">Java中的泛型方法</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-12-04T16:36:56+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>4</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>4:36 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>在通过反射获取类的私有域时希望写一个方法，可以指定一个域的名字和域的类型，可以返回指定类型的对象。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/12/04/javazhong-de-fan-xing-fang-fa/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/11/25/Android%E6%9E%84%E5%BB%BA%E5%86%85%E6%B5%8B%E7%89%88%E6%9C%AC%E7%A8%8B%E5%BA%8F/">Android构建内测版本程序</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-11-25T16:21:04+08:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>25</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>4:21 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>在开发应用的过程中，有时候需要比较当前线上版本和正在开发中的版本差异，目前的做法只能是在两个不同的设备上面安装线上版本和开发中的版本，因为当前版本在调试过程中会覆盖旧版本。本文通过使用gradle来构建android应用变种版本，通过配置build type和productFlavors来进行实践，结果不完全尽如人意，但是提供了同一个程序不同变种在一个设备上共存的一种实践。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/11/25/Android%E6%9E%84%E5%BB%BA%E5%86%85%E6%B5%8B%E7%89%88%E6%9C%AC%E7%A8%8B%E5%BA%8F/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/11/22/first/">使用Octopress写博客的个性配置</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-11-22T14:09:59+08:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>22</span><span class='date-suffix'>nd</span>, <span class='date-year'>2014</span></span> <span class='time'>2:09 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"></div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/11/22/first/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  <div class="pagination">
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
-</div>
 <aside class="sidebar">
   
     <section>
@@ -375,6 +250,7 @@ apache的HttpClient中(注意，这里将这个apache对于Http的客户端实�
 </section>
   
 </aside>
+
 
     </div>
   </div>
