@@ -185,10 +185,10 @@ private int b = 2;
 <p>例子：</p>
 
 <pre><code>class Person {
-    @Since(value = 1.0)     //Gson版本要从1.0开始的Gson才能解析
+    @Since(value = 1.0)     //GsonBuilder指定版本要从1.0开始的Gson才能解析
     private int a = 1;
 
-    @Until(value = 1.5)   //Gson版本到1.5的Gson都可以解析，超过了不能解析
+    @Until(value = 1.5)   //GsonBuilder指定版本到1.5的Gson都可以解析，超过了不能解析
     private int b = 2;
 }
 </code></pre>
