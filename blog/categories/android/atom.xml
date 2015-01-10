@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Android | 楚云之南]]></title>
   <link href="http://chuyun923.github.io/blog/categories/android/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2015-01-07T01:52:56+08:00</updated>
+  <updated>2015-01-10T22:02:37+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -12,6 +12,212 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Gson源码之JsonReader]]></title>
+    <link href="http://chuyun923.github.io/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/"/>
+    <updated>2015-01-10T14:17:21+08:00</updated>
+    <id>http://chuyun923.github.io/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li</id>
+    <content type="html"><![CDATA[<p>前文介绍了<code>Gson</code>对于<code>Json</code>规范中的类型进行了抽象定义，本文将来介绍<code>stream</code>包中的源码，这一块是<code>Gson</code>的核心代码之一。Gson中的JsonReader抄自android.util包中JsonReader，只是把其中的上下文栈由ArrayList换成了数组，</p>
+
+<!--more-->
+
+
+<h2>StringPool&ndash;(Flyweight Pattern)</h2>
+
+<p>在Stream包中提供了一种针对String的优化处理，可以减少内存中String对象的个数，途径就是通过StringPool来对字符串进行复用。需要注意的是，在Java中字符串对象是不能被修改的，这也是这个Pool能正常工作的重要原因。StringPool原理和HashMap一模一样，通过一个2的n次方(512)作为数组的长度，字符串的hascode计算方式和String中的一致。为了使得hashcode分布分散一点，同样使用hashmap的补偿hash函数对hashcode进行处理，这一块的具体优化处理可以关注以后的HashMap源码分析。</p>
+
+<h2>深度优先的解析策略</h2>
+
+<p>Gson解析Json字符采用的是深度优先策略，下面是一个简单解析的栗子：</p>
+
+<pre><code>[
+&lt;!--数组中每一个对象为一个message对象--&gt;
+{
+  "id": 912345678901,
+  "text": "How do I read a JSON stream in Java?",
+  &lt;!--geo是一个double类型的数组--&gt;
+  "geo": null,
+  &lt;!--user对象--&gt;
+  "user": {
+    "name": "json_newb",
+    "followers_count": 41
+   }
+},
+{
+  "id": 912345678902,
+  "text": "@json_newb just use JsonReader!",
+  "geo": [50.454722, -104.606667],
+  "user": {
+    "name": "jesse",
+    "followers_count": 2
+  }
+}
+]
+</code></pre>
+
+<p>深度解析的逻辑如下，先找到这个json字符串的开始位置，本例中是<code>[</code>，此时我们知道这个json字符串是一个数组，下一步从第一个元素开始解析(一层循环)。读取下一个字符，<code>{</code>,可以知道第一个元素为对象。对于<code>{</code>开始的JsonObject，我们知道它其中的内容肯定是键值对的样式，那我可以读取下一个字符，而且它必须为<code>"</code>(属性名)，然后去读取属性值。ok，我们可以看到这是一种非常正常的解析逻辑，其实Gson的解析就是这么做的。</p>
+
+<h2>数据抽象</h2>
+
+<p>为了进行上面的解析过程，Gson中定义了两种数据类型：</p>
+
+<h3>JsonToken(解析类型)</h3>
+
+<p>由于Json定义规范的原因，我们在解析过程中只要解析到一个结构的第一个元素再联系上下文就可以推断这个结构的类型。JsonToken用来描述<code>Json</code>中的<code>'{','}','[',']','"'</code>,<code>NULL</code>,<code>number</code>，<code>boolean</code>,属性名和属性字符串值，其实JsonToken的基本上等于每一个结构的开头，其中<code>"</code>既可以表示一个属性名也可以表示一个属性就是一个String，这需要按照上下文来确定。
+在<code>JsonReader</code>定义了一个属性<code>token</code>，用来存储<code>Json</code>串解析位置的下一个<code>JsonToken</code>。</p>
+
+<h3>JsonScope(解析上下文)</h3>
+
+<p>用来描述当前正在解析的位置所处的一个状态，为解析提供一个上下文做推断。比如，目前我们解析到了一个<code>{</code>字符，那么下一个字符串必须是空或者&#8217;&ldquo;&lsquo;，如此我们可以推断这个<code>"</code>肯定是一个JsonToken.Name(属性名)。此外，JsonScope还可以描述一个JsonArray或者JsonObject目前解析到的位置是否是第一个元素。<code>JsonScope</code>被存放在一个栈中，而且是成对出现。</p>
+
+<pre><code> private JsonScope[] stack = new JsonScope[32];
+ {
+   push(JsonScope.EMPTY_DOCUMENT);  //静态初始化时push空Json文件到栈顶
+ }
+ 需要注意的是，这里这个栈之只实现了一个push操作，并提供了动态增长，出栈操作只需要简单的简单的stacksize--
+</code></pre>
+
+<h2>JsonReader工作流</h2>
+
+<p><code>JsonReader</code>的构造函数接受一个<code>Reader</code>的参数，它是一个<code>Json</code>串的<code>InputStream</code>包装出来的<code>Reader</code>。</p>
+
+<p>对于这个上文<code>Json</code>文档的解析，<code>JsonReader</code>的理逻辑如下：</p>
+
+<pre><code>List&lt;Message&gt; result = new ArrayList&lt;Message&gt;(); 
+jsonReader.beginArray();   //找到数组
+while(jsonReader.hasnext) {
+    Message message = new Message();
+    jsonReader.beginObject();   //开始数组中的对象
+    while(jsonReader.hasnext) {
+        String name = jsonReader.nextName();
+        if(name.equals("id")) {
+            message.setId(jsonReader.nextString());
+        }else if(name.equals("text")) {
+            message.setText(jsonReader.nextString());
+        }else if(name.equals("geo")&amp;&amp;jsonReader.peek()!=NULL) {
+             List&lt;Double&gt; list = new ArrayList&lt;Double&gt;();
+             jsonReader.beginArray();
+             while(jsonReader.hasnext()) {
+                list.add(jsonReader.nextDouble());
+             }
+             JsonReader.endArray();
+        }
+        jsonReader.beginObject();
+       .....开始解析User对象......
+    }
+    result.add(message);
+}
+</code></pre>
+
+<h3>一些函数的解释</h3>
+
+<h4>begin和 end系列函数</h4>
+
+<p>其实这两个函数只是从业务的角度出发，封装了一下，实际两个函数都是调用<code>except(JsonToken)</code>，作用是寻找<code>json</code>字符串中的下一个<code>JsonToken</code>。以<code>beginObject()</code>函数来说，它直接调用<code>except(JsonToken.BEGIN_OBJECT)</code>。</p>
+
+<pre><code>private void expect(JsonToken expected) throws IOException {
+peek();         //找到下一个JsonToken，赋值给JsonReader的token属性
+if (token != expected) {  //判断下一个Token是否等于指定的Token类型
+  throw new IllegalStateException("Expected " + expected + " but was " +        peek() + " at line " + getLineNumber() + " column " +       getColumnNumber());
+}
+advance();  //下一步操作
+}
+</code></pre>
+
+<h4>peek函数</h4>
+
+<p>peek函数是JsonReader中最重要的函数，它的主要作用是进行上下文的判断，判断下一个JsonToken的读取方法。</p>
+
+<p>下面看一下<code>peek()</code>函数的实现：</p>
+
+<pre><code>public JsonToken peek() throws IOException {
+//之前解析出来的token还没有被消费，直接取回
+if (token != null) {
+  return token;
+}
+//查看栈顶的JsonScope，这里可以看到JsonScope就是一个上下文的角色
+switch (stack[stackSize - 1]) {
+case EMPTY_DOCUMENT:    //json文档的开始 
+  if (lenient) {    //json防止攻击引入的前导，防止跨域攻击
+    consumeNonExecutePrefix();
+  }
+  stack[stackSize - 1] = JsonScope.NONEMPTY_DOCUMENT;   //注意这里不是push而是直接替换栈顶元素
+  JsonToken firstToken = nextValue();   //返回流中的下一个开始JsonToken，在上个例子中就是'['，也就是这里返回的是一个JsonToken.BEGIN_ARRAY,这个值还会被保存在token属性中
+  if (!lenient &amp;&amp; token != JsonToken.BEGIN_ARRAY &amp;&amp; token != JsonToken.BEGIN_OBJECT) {   //一个json文档开始无非就是一个对象或者数组
+    throw new IOException("Expected JSON document to start with '[' or '{' but was " + token
+        + " at line " + getLineNumber() + " column " + getColumnNumber());
+  }
+  return firstToken;
+case EMPTY_ARRAY:
+    //目前处于一个数组中，但是还没有开始读取任何数据
+  return nextInArray(true);
+case NONEMPTY_ARRAY:
+  return nextInArray(false);
+case EMPTY_OBJECT: //目前处于一个JsonObject中但是还没有读取任何数据
+  return nextInObject(true);
+case DANGLING_NAME: //目前处于一个属性名的位置
+  return objectValue();
+case NONEMPTY_OBJECT:
+  return nextInObject(false);
+case NONEMPTY_DOCUMENT:
+    //当前处于一个文档的解析上下文中，可以理解为根元素下一级的环境
+  int c = nextNonWhitespace(false);
+  if (c == -1) {
+    return JsonToken.END_DOCUMENT;
+  }
+  pos--;
+  if (!lenient) {
+    throw syntaxError("Expected EOF");
+  }
+  //找下一个JsonToken
+  return nextValue();
+case CLOSED:
+  throw new IllegalStateException("JsonReader is closed");
+default:
+  throw new AssertionError();
+}
+}
+</code></pre>
+
+<p> ####nextIn**()</p>
+
+<p> 提供了数组、JsonObject的解析方法。</p>
+
+<h4>nextValue()</h4>
+
+<pre><code>找下一个JsonToken
+
+private JsonToken nextValue() throws IOException {
+int c = nextNonWhitespace(true);    //找到当前解析位置之后的第一个非空白字符
+switch (c) {
+case '{':
+  push(JsonScope.EMPTY_OBJECT);   //进入一个JsonObject
+  return token = JsonToken.BEGIN_OBJECT;
+
+case '[':
+  push(JsonScope.EMPTY_ARRAY);   //进入一个数组
+  return token = JsonToken.BEGIN_ARRAY;
+  //以上两种情况说明是一个新的结构的开始，所以需要pushJsonScope到栈中
+case '\'':
+  checkLenient(); // fall-through
+case '"':
+  //代表一个Json字符串值
+  value = nextString((char) c);  //找到两个引号之间的String值
+  return token = JsonToken.STRING;
+
+default:
+  pos--;
+  return readLiteral();
+}
+}
+</code></pre>
+
+<h3>JsonReader总结</h3>
+
+<p>JsonReader中通过一个上下文来保存当前解析的环境，通过next**系列函数来获取下一个JsonToken。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Gson源码分析之Json结构抽象和注解使用]]></title>
@@ -477,59 +683,6 @@ public void load(ImageView imageView,String imageUrl,int placeResId);
 </code></pre>
 
 <p>总结：genious Adapter可以使用户在getView方法中无需关注每一项ItemView生成的细节，而只需要处理数据绑定的逻辑即可。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Android构建内测版本程序]]></title>
-    <link href="http://chuyun923.github.io/blog/2014/11/25/Android%E6%9E%84%E5%BB%BA%E5%86%85%E6%B5%8B%E7%89%88%E6%9C%AC%E7%A8%8B%E5%BA%8F/"/>
-    <updated>2014-11-25T16:21:04+08:00</updated>
-    <id>http://chuyun923.github.io/blog/2014/11/25/Android构建内测版本程序</id>
-    <content type="html"><![CDATA[<p>在开发应用的过程中，有时候需要比较当前线上版本和正在开发中的版本差异，目前的做法只能是在两个不同的设备上面安装线上版本和开发中的版本，因为当前版本在调试过程中会覆盖旧版本。本文通过使用gradle来构建android应用变种版本，通过配置build type和productFlavors来进行实践，结果不完全尽如人意，但是提供了同一个程序不同变种在一个设备上共存的一种实践。</p>
-
-<!--more-->
-
-
-<h2>applicationID VS package</h2>
-
-<p>在android的manifest文件中，我们可以配置一个package字段，这个字段主要有两个作用：</p>
-
-<ol>
-<li>作为包名指出当前应用的R文件所在路径和组件所在路径。所以我们在manifest文件中可以使用相对路径来配置activity等。</li>
-<li>作为应用的唯一标识在系统中存在，此时，其作用==applicationID。</li>
-</ol>
-
-
-<p>要使同一个应用的不同版本在设备上共存的前提是它们具有不同的applicationID。</p>
-
-<h2>buildTypes VS productFlavors</h2>
-
-<p>要修改applicationId可以通过配置buildTypes中的applicationIdSuffix属性，起作用是将applicationId设置为package加上你所配置的后缀。此时，面临的第一个问题是我可能需要对debug版本和线上版本进行区分，比如不同的app图标，app名字以便在launcher里面进行区分。此时，productFlavor可以帮上忙，productFlavor提供了替换程序资源文件的功能，只需要在当前项目的src目录下新建一个flavor目录，在里面覆写资源即可。<br />到此，我们可以构建出一个用于开发的内测版本，它不会覆盖手机上已经安装的线上版本。</p>
-
-<h2>一些尝试</h2>
-
-<p>通过第二节，我们可以打出一个内测包，但是还是存在如下问题：</p>
-
-<ol>
-<li>两个版本中大部分的隐式跳转都一样，你能忍受在应用内随便点击一个页面，就会弹出选择框的情况？</li>
-<li>如果应用中注册了Provider，将会被禁止安装第二个app，因为Provider不能重名</li>
-</ol>
-
-
-<p>针对第一个问题，我目前的解决方案是将actvity声明的data字段全部引用资源文件，然后通过flavor去为debug版本修改data中的implict_intent_host字段。</p>
-
-<pre><code>    &lt;data android:host="@string/implict_intent_host"
-         android:path="/movie"
-         android:scheme="@string/implict_intent_scheme" /&gt;
-</code></pre>
-
-<p>这样，debug版本的activity的data将会改变，由于之前项目在创建隐式跳转都集中管理了，那么只需要修改创建的隐式intent  Uri的host部分从资源文件读取即可。但是这个方案存在一些问题：从第三方(如html5页面)的跳转就会失效，因为内测版本的intent host已经不再是公约的版本，这个暂时还没有解决方案来处理。。。，小小的遗憾</p>
-
-<p>第二个问题好解决，只需要将provider的authorities字段区分一下即可，同样也会带来一点点问题，比如一个公司内部存在多个app，之间通过provider来提供数据的话，那么这个provider应该对于其它app是已知的，修改authorities之后，其他app会找不到这个provider。</p>
-
-<h2>总结</h2>
-
-<p>以上提到的方法虽然存在一些问题，但是从目前来看只要注意到之前提到的这些内容，应该不会给开发带来太大的困扰，同时我们最好提供一个默认的flovar，它不定义任何特殊的行为，那么通过gradle assembleNormalDebug和我们正常打出来的debug包没有任何差别。</p>
 ]]></content>
   </entry>
   
