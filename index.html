@@ -9,7 +9,7 @@
   <meta name="author" content="楚云">
 
   
-  <meta name="description" content="前文介绍了Gson对于Json规范中的类型进行了抽象定义，本文将来介绍stream包中的源码，这一块是Gson的核心代码之一。Gson中的JsonReader抄自android.util包中JsonReader，只是把其中的上下文栈由ArrayList换成了数组， ">
+  <meta name="description" content="前文介绍了Gson对于Json规范中的类型进行了抽象定义，本文将来介绍stream包中的源码，这一块是Gson的核心代码之一。Gson中的JsonReader和JsonWriter抄自android.util包中的两个类，只是把其中的上下文栈由ArrayList换成了数组，提高了效率。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -71,7 +71,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码之JsonReader</a></h1>
+      <h1 class="entry-title"><a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码(二)之JsonReader和JsonWriter</a></h1>
     
     
       <p class="meta">
@@ -87,7 +87,7 @@
   </header>
 
 
-  <div class="entry-content"><p>前文介绍了<code>Gson</code>对于<code>Json</code>规范中的类型进行了抽象定义，本文将来介绍<code>stream</code>包中的源码，这一块是<code>Gson</code>的核心代码之一。Gson中的JsonReader抄自android.util包中JsonReader，只是把其中的上下文栈由ArrayList换成了数组，</p>
+  <div class="entry-content"><p>前文介绍了<code>Gson</code>对于<code>Json</code>规范中的类型进行了抽象定义，本文将来介绍<code>stream</code>包中的源码，这一块是<code>Gson</code>的核心代码之一。Gson中的JsonReader和JsonWriter抄自android.util包中的两个类，只是把其中的上下文栈由ArrayList换成了数组，提高了效率。这两个类为Json序列化和反序列化提供了基本接口。</p>
 
 </div>
   
@@ -136,7 +136,7 @@
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析之Json结构抽象和注解使用</a></h1>
+      <h1 class="entry-title"><a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析(一)之Json结构抽象和注解使用</a></h1>
     
     
       <p class="meta">
@@ -423,7 +423,7 @@
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码之JsonReader</a>
+        <a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码(二)之JsonReader和JsonWriter</a>
       </li>
     
       <li class="post">
@@ -431,7 +431,7 @@
       </li>
     
       <li class="post">
-        <a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析之Json结构抽象和注解使用</a>
+        <a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析(一)之Json结构抽象和注解使用</a>
       </li>
     
       <li class="post">

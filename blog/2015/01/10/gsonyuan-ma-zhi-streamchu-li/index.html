@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Gson源码之JsonReader - 楚云之南</title>
+  <title>Gson源码(二)之JsonReader和JsonWriter - 楚云之南</title>
   <meta name="author" content="楚云">
 
   
-  <meta name="description" content="前文介绍了Gson对于Json规范中的类型进行了抽象定义，本文将来介绍stream包中的源码，这一块是Gson的核心代码之一。Gson中的JsonReader抄自android.util包中JsonReader，只是把其中的上下文栈由ArrayList换成了数组， StringPool&ndash &hellip;">
+  <meta name="description" content="前文介绍了Gson对于Json规范中的类型进行了抽象定义，本文将来介绍stream包中的源码，这一块是Gson的核心代码之一。Gson中的JsonReader和JsonWriter抄自android.util包中的两个类，只是把其中的上下文栈由ArrayList换成了数组，提高了效率。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -68,7 +68,7 @@
   
   <header>
     
-      <h1 class="entry-title">Gson源码之JsonReader</h1>
+      <h1 class="entry-title">Gson源码(二)之JsonReader和JsonWriter</h1>
     
     
       <p class="meta">
@@ -84,10 +84,12 @@
   </header>
 
 
-<div class="entry-content"><p>前文介绍了<code>Gson</code>对于<code>Json</code>规范中的类型进行了抽象定义，本文将来介绍<code>stream</code>包中的源码，这一块是<code>Gson</code>的核心代码之一。Gson中的JsonReader抄自android.util包中JsonReader，只是把其中的上下文栈由ArrayList换成了数组，</p>
+<div class="entry-content"><p>前文介绍了<code>Gson</code>对于<code>Json</code>规范中的类型进行了抽象定义，本文将来介绍<code>stream</code>包中的源码，这一块是<code>Gson</code>的核心代码之一。Gson中的JsonReader和JsonWriter抄自android.util包中的两个类，只是把其中的上下文栈由ArrayList换成了数组，提高了效率。这两个类为Json序列化和反序列化提供了基本接口。</p>
 
 <!--more-->
 
+
+<h1>反序列化&mdash;JsonReader</h1>
 
 <h2>StringPool&ndash;(Flyweight Pattern)</h2>
 
@@ -246,7 +248,7 @@ default:
 }
 </code></pre>
 
-<p> ####nextIn**()</p>
+<h4>nextIn**()</h4>
 
 <p> 提供了数组、JsonObject的解析方法。</p>
 
@@ -281,7 +283,69 @@ default:
 
 <h3>JsonReader总结</h3>
 
-<p>JsonReader中通过一个上下文来保存当前解析的环境，通过next**系列函数来获取下一个JsonToken。</p>
+<p>JsonReader可以看作一个最基本的Json解析的接口，JsonReader中通过一个上下文来保存当前解析的环境，通过next**系列函数来获取下一个JsonToken。</p>
+
+<h1>序列化&ndash;JsonWriter</h1>
+
+<p>理解了JsonReader的源码之后，再来看Writer就相对来说简单多了。现在我们有一个数组，List<Message>，它的值就如上面的例子，那如何序列化呢?</p>
+
+<pre><code>public void writeJsonStream(OutputStream out, List&lt;Message&gt; messages) throws IOException {
+      JsonWriter writer = new JsonWriter(new OutputStreamWriter(out, "UTF-8"));
+      writer.setIndent("\t");           //设置每一行的缩进
+      writeMessagesArray(writer, messages);
+      writer.close();
+    }
+
+    public void writeMessagesArray(JsonWriter writer, List&lt;Message&gt; messages) throws IOException {
+      writer.beginArray();   //[
+      for (Message message : messages) {
+        writeMessage(writer, message);
+      }
+      writer.endArray();
+    }
+
+    public void writeMessage(JsonWriter writer, Message message) throws IOException {
+      writer.beginObject(); //{
+      writer.name("id").value(message.getId()); // "id":23435356
+      writer.name("text").value(message.getText()); //"text":"dflsfldsfljd"
+      if (message.getGeo() != null) {
+        writer.name("geo");
+        writeDoublesArray(writer, message.getGeo());
+      } else {
+        writer.name("geo").nullValue();
+      }
+      writer.name("user");
+      writeUser(writer, message.getUser());
+      writer.endObject();
+    }
+
+    public void writeUser(JsonWriter writer, User user) throws IOException {
+      writer.beginObject();
+      writer.name("name").value(user.getName());
+      writer.name("followers_count").value(user.getFollowersCount());
+      writer.endObject();
+    }
+
+    public void writeDoublesArray(JsonWriter writer, List&lt;Double&gt; doubles) throws IOException {
+      writer.beginArray();
+      for (Double value : doubles) {
+        writer.value(value);
+      }
+      writer.endArray();
+    }
+</code></pre>
+
+<h2>JsonWriter中的函数</h2>
+
+<p>   事实上，可以看到JsonWriter的工作和JsonReader刚好相反，两个类的对json字符串的处理方式也基本相同。下面说一些业务流程中较为重要的方法。</p>
+
+<h3>beginArray and beginObject</h3>
+
+<p>开始向流中写入一个数组或者JsonObject的开始，注意，这里不仅仅是写入一个<code>[</code>或者一个<code>{</code>这么简单，首先会调用<code>writeDeferredName</code>方法，它的主要功能是如果这个开始的JsonElement是JsonObject中的一个属性，那么它的前面肯定有一个和上一个元素的分割符号和一个名字。</p>
+
+<h3>endArray and endObject</h3>
+
+<p>结束一个数组和对象。</p>
 </div>
 
 
@@ -354,7 +418,7 @@ default:
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码之JsonReader</a>
+        <a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码(二)之JsonReader和JsonWriter</a>
       </li>
     
       <li class="post">
@@ -362,7 +426,7 @@ default:
       </li>
     
       <li class="post">
-        <a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析之Json结构抽象和注解使用</a>
+        <a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析(一)之Json结构抽象和注解使用</a>
       </li>
     
       <li class="post">

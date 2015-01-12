@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Android | 楚云之南]]></title>
   <link href="http://chuyun923.github.io/blog/categories/android/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2015-01-10T22:02:37+08:00</updated>
+  <updated>2015-01-12T10:59:20+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -14,14 +14,16 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Gson源码之JsonReader]]></title>
+    <title type="html"><![CDATA[Gson源码(二)之JsonReader和JsonWriter]]></title>
     <link href="http://chuyun923.github.io/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/"/>
     <updated>2015-01-10T14:17:21+08:00</updated>
     <id>http://chuyun923.github.io/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li</id>
-    <content type="html"><![CDATA[<p>前文介绍了<code>Gson</code>对于<code>Json</code>规范中的类型进行了抽象定义，本文将来介绍<code>stream</code>包中的源码，这一块是<code>Gson</code>的核心代码之一。Gson中的JsonReader抄自android.util包中JsonReader，只是把其中的上下文栈由ArrayList换成了数组，</p>
+    <content type="html"><![CDATA[<p>前文介绍了<code>Gson</code>对于<code>Json</code>规范中的类型进行了抽象定义，本文将来介绍<code>stream</code>包中的源码，这一块是<code>Gson</code>的核心代码之一。Gson中的JsonReader和JsonWriter抄自android.util包中的两个类，只是把其中的上下文栈由ArrayList换成了数组，提高了效率。这两个类为Json序列化和反序列化提供了基本接口。</p>
 
 <!--more-->
 
+
+<h1>反序列化&mdash;JsonReader</h1>
 
 <h2>StringPool&ndash;(Flyweight Pattern)</h2>
 
@@ -180,7 +182,7 @@ default:
 }
 </code></pre>
 
-<p> ####nextIn**()</p>
+<h4>nextIn**()</h4>
 
 <p> 提供了数组、JsonObject的解析方法。</p>
 
@@ -215,12 +217,74 @@ default:
 
 <h3>JsonReader总结</h3>
 
-<p>JsonReader中通过一个上下文来保存当前解析的环境，通过next**系列函数来获取下一个JsonToken。</p>
+<p>JsonReader可以看作一个最基本的Json解析的接口，JsonReader中通过一个上下文来保存当前解析的环境，通过next**系列函数来获取下一个JsonToken。</p>
+
+<h1>序列化&ndash;JsonWriter</h1>
+
+<p>理解了JsonReader的源码之后，再来看Writer就相对来说简单多了。现在我们有一个数组，List<Message>，它的值就如上面的例子，那如何序列化呢?</p>
+
+<pre><code>public void writeJsonStream(OutputStream out, List&lt;Message&gt; messages) throws IOException {
+      JsonWriter writer = new JsonWriter(new OutputStreamWriter(out, "UTF-8"));
+      writer.setIndent("\t");           //设置每一行的缩进
+      writeMessagesArray(writer, messages);
+      writer.close();
+    }
+
+    public void writeMessagesArray(JsonWriter writer, List&lt;Message&gt; messages) throws IOException {
+      writer.beginArray();   //[
+      for (Message message : messages) {
+        writeMessage(writer, message);
+      }
+      writer.endArray();
+    }
+
+    public void writeMessage(JsonWriter writer, Message message) throws IOException {
+      writer.beginObject(); //{
+      writer.name("id").value(message.getId()); // "id":23435356
+      writer.name("text").value(message.getText()); //"text":"dflsfldsfljd"
+      if (message.getGeo() != null) {
+        writer.name("geo");
+        writeDoublesArray(writer, message.getGeo());
+      } else {
+        writer.name("geo").nullValue();
+      }
+      writer.name("user");
+      writeUser(writer, message.getUser());
+      writer.endObject();
+    }
+
+    public void writeUser(JsonWriter writer, User user) throws IOException {
+      writer.beginObject();
+      writer.name("name").value(user.getName());
+      writer.name("followers_count").value(user.getFollowersCount());
+      writer.endObject();
+    }
+
+    public void writeDoublesArray(JsonWriter writer, List&lt;Double&gt; doubles) throws IOException {
+      writer.beginArray();
+      for (Double value : doubles) {
+        writer.value(value);
+      }
+      writer.endArray();
+    }
+</code></pre>
+
+<h2>JsonWriter中的函数</h2>
+
+<p>   事实上，可以看到JsonWriter的工作和JsonReader刚好相反，两个类的对json字符串的处理方式也基本相同。下面说一些业务流程中较为重要的方法。</p>
+
+<h3>beginArray and beginObject</h3>
+
+<p>开始向流中写入一个数组或者JsonObject的开始，注意，这里不仅仅是写入一个<code>[</code>或者一个<code>{</code>这么简单，首先会调用<code>writeDeferredName</code>方法，它的主要功能是如果这个开始的JsonElement是JsonObject中的一个属性，那么它的前面肯定有一个和上一个元素的分割符号和一个名字。</p>
+
+<h3>endArray and endObject</h3>
+
+<p>结束一个数组和对象。</p>
 ]]></content>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[Gson源码分析之Json结构抽象和注解使用]]></title>
+    <title type="html"><![CDATA[Gson源码分析(一)之Json结构抽象和注解使用]]></title>
     <link href="http://chuyun923.github.io/blog/2015/01/06/gsonyuan-ma-fen-xi/"/>
     <updated>2015-01-06T22:31:27+08:00</updated>
     <id>http://chuyun923.github.io/blog/2015/01/06/gsonyuan-ma-fen-xi</id>
@@ -252,7 +316,7 @@ default:
 }
 </code></pre>
 
-<p>这个data是一个典型的JsonObject，它以<code>{</code>开头，其中包含了一些类似数值，数组，对象等其他JsonElement的内容。<strong>其实每一个Json字符串的根节点都是一个JsonObject。</strong></p>
+<p>这个data是一个典型的JsonObject，它以<code>{</code>开头，其中包含了一些类似数值，数组，对象等其他JsonElement的内容。<strong>其实每一个Json字符串的根节点都是一个JsonObject或者JsonArray。</strong></p>
 
 <p>JsonObject提供了比较多的方法来得到Json中的信息，addProperty()函数可以在当前Json节点下新建子结点。</p>
 

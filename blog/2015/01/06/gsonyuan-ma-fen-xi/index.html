@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Gson源码分析之Json结构抽象和注解使用 - 楚云之南</title>
+  <title>Gson源码分析(一)之Json结构抽象和注解使用 - 楚云之南</title>
   <meta name="author" content="楚云">
 
   
@@ -68,7 +68,7 @@
   
   <header>
     
-      <h1 class="entry-title">Gson源码分析之Json结构抽象和注解使用</h1>
+      <h1 class="entry-title">Gson源码分析(一)之Json结构抽象和注解使用</h1>
     
     
       <p class="meta">
@@ -112,7 +112,7 @@
 }
 </code></pre>
 
-<p>这个data是一个典型的JsonObject，它以<code>{</code>开头，其中包含了一些类似数值，数组，对象等其他JsonElement的内容。<strong>其实每一个Json字符串的根节点都是一个JsonObject。</strong></p>
+<p>这个data是一个典型的JsonObject，它以<code>{</code>开头，其中包含了一些类似数值，数组，对象等其他JsonElement的内容。<strong>其实每一个Json字符串的根节点都是一个JsonObject或者JsonArray。</strong></p>
 
 <p>JsonObject提供了比较多的方法来得到Json中的信息，addProperty()函数可以在当前Json节点下新建子结点。</p>
 
@@ -268,7 +268,7 @@ private int b = 2;
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码之JsonReader</a>
+        <a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码(二)之JsonReader和JsonWriter</a>
       </li>
     
       <li class="post">
@@ -276,7 +276,7 @@ private int b = 2;
       </li>
     
       <li class="post">
-        <a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析之Json结构抽象和注解使用</a>
+        <a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析(一)之Json结构抽象和注解使用</a>
       </li>
     
       <li class="post">
