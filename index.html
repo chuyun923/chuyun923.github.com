@@ -9,7 +9,7 @@
   <meta name="author" content="楚云">
 
   
-  <meta name="description" content="前文介绍了Gson对于Json规范中的类型进行了抽象定义，本文将来介绍stream包中的源码，这一块是Gson的核心代码之一。Gson中的JsonReader和JsonWriter抄自android.util包中的两个类，只是把其中的上下文栈由ArrayList换成了数组，提高了效率。 &hellip;">
+  <meta name="description" content="Java中为处理日期和时间提供了大量的API，确实有把一件简单的事情搞复杂的嫌疑，各种类：Date Time Timestamp Calendar...，但是如果能够看到时间处理的本质就可以轻松hold住这堆东西了。 ">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -65,6 +65,103 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/04/15/">Java中日期时间API小结</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-04-15T17:47:06+08:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>15</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>5:47 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Java中为处理日期和时间提供了大量的API，确实有把一件简单的事情搞复杂的嫌疑，各种类：<code>Date Time Timestamp Calendar...</code>，但是如果能够看到时间处理的本质就可以轻松hold住这堆东西了。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2015/04/15/">展开全文</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/02/05/gradlezhi-nan-11/">Gradle指南-11</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-02-05T00:55:29+08:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>5</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>12:55 am</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h1>使用命令行执行gradle任务</h1>
+
+<p><a href="http://gradle.org/docs/current/userguide/tutorial_gradle_command_line.html">指南原文，看这里</a></p>
+
+<p>gradle执行task的基本命令是：</p>
+
+<p><code>gradle taskname</code></p>
+
+<p><strong>gradle支持模糊匹配，taskname只要能够模糊唯一匹配即可</strong></p>
+
+<h2>gradle执行多个task</h2>
+
+<p>命令格式： <code>gradle task1 task2 ...</code></p>
+
+<p>这样可以按顺序执行task1，task2，以及这些task所依赖的task,一个task及其依赖执行完了，才会执行下一个task。task依赖最深的会被最先执行然后递归出来。<strong>每一个task不管被依赖了几次，在一条gradle命令时，都只执行一次。</strong></p>
+
+<p>例有四个task的依赖如下图：</p>
+
+<p><img src="http://gradle.org/docs/current/userguide/img/commandLineTutorialTasks.png" alt="" /></p>
+
+<p>执行<code>gradle dist test</code>，首先会执行<code>dist</code>的依赖，所以执行顺序为：
+compile&ndash;>compileTest&ndash;>test&ndash;>dist(每个task都只执行一遍)</p>
+
+<h2>排除task</h2>
+
+<p>如果不想执行某个task(一般是task依赖的task)，可以通过：</p>
+
+<p><code>gradle task1 task2 -x excludingTask1,excludingTask2..</code>，去掉的task以及它所带入的依赖task都不会被执行。</p>
+
+<h2>gradle tasks&hellip; &ndash;continue</h2>
+
+<p>如果不加，那么gradle在执行task的时候，如果遇到错误，那么以下所有没有执行的task都会终止，这一次build结束。加上continue参数之后，每一次gradle命令都会执行所有的task，这样可以检查所有的task。
+<strong>如果一个task失败，那么所有基于这个task的task都不会被执行。</strong></p>
+
+<hr />
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -344,73 +441,9 @@
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/11/25/Android%E6%9E%84%E5%BB%BA%E5%86%85%E6%B5%8B%E7%89%88%E6%9C%AC%E7%A8%8B%E5%BA%8F/">Android构建内测版本程序</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-11-25T16:21:04+08:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>25</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>4:21 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>在开发应用的过程中，有时候需要比较当前线上版本和正在开发中的版本差异，目前的做法只能是在两个不同的设备上面安装线上版本和开发中的版本，因为当前版本在调试过程中会覆盖旧版本。本文通过使用gradle来构建android应用变种版本，通过配置build type和productFlavors来进行实践，结果不完全尽如人意，但是提供了同一个程序不同变种在一个设备上共存的一种实践。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/11/25/Android%E6%9E%84%E5%BB%BA%E5%86%85%E6%B5%8B%E7%89%88%E6%9C%AC%E7%A8%8B%E5%BA%8F/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/11/22/first/">使用Octopress写博客的个性配置</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-11-22T14:09:59+08:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>22</span><span class='date-suffix'>nd</span>, <span class='date-year'>2014</span></span> <span class='time'>2:09 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"></div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/11/22/first/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
+    
+      <a class="prev" href="/posts/2">&larr; Older</a>
     
     <a href="/blog/archives">Blog Archives</a>
     
@@ -421,6 +454,14 @@
     <section>
   <h1>最近发表</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/04/15/">Java中日期时间API小结</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/02/05/gradlezhi-nan-11/">Gradle指南-11</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码(二)之JsonReader和JsonWriter</a>
@@ -434,14 +475,6 @@
         <a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析(一)之Json结构抽象和注解使用</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2014/12/23/android-actionbar/">Android ActionBar</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/12/19/androidzhi-cai-dan/">Android之菜单</a>
-      </li>
-    
   </ul>
 </section>
 
@@ -451,8 +484,8 @@
 <section>
     <h1>文章分类</h1>
     <ul id="categories">
-        <li class='category'><a href='/blog/categories/android/'>android (6)</a></li>
-<li class='category'><a href='/blog/categories/java/'>java (2)</a></li>
+        <li class='category'><a href='/blog/categories/android/'>android (7)</a></li>
+<li class='category'><a href='/blog/categories/java/'>java (3)</a></li>
 <li class='category'><a href='/blog/categories/网络协议-http/'>网络协议/http (1)</a></li>
 <li class='category'><a href='/blog/categories/闲记/'>闲记 (1)</a></li>
 
