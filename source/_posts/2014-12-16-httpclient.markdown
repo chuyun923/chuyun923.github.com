@@ -5,6 +5,8 @@ date: 2014-12-16 12:20:26 +0800
 comments: true
 categories: 网络协议/HTTP
 ---
+Http协议是在开发中使用最多的网络协议，大部分的网络接口都是通过Http来设计。在Android中提供了两种Http客户端，HttpClient和HttpUrlConnetion。其中后者在低版本存在某些问题，但是HttpClient尽管功能强大，但使用麻烦，接口众多，本文主要是简单介绍HttpClient中使用的一些概念。
+<!--more-->
 ##Request URI
 URI用来表示一个HTTP请求的目标，它由protocol scheme,host名字,port(可选)，resource path,query(可选)和fragment(可选)组成。对应的例子就是：<br />
 "http://www.google.com/search?hl=en&q=httpclient&btnG=Google+Search&aq=f&oq="

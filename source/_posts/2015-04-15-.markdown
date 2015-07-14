@@ -1,0 +1,170 @@
+---
+layout: post
+title: "Java中日期时间API小结"
+date: 2015-04-15 17:47:06 +0800
+comments: true
+categories: Java
+---
+Java中为处理日期和时间提供了大量的API，确实有把一件简单的事情搞复杂的嫌疑，各种类：`Date Time Timestamp Calendar...`，但是如果能够看到时间处理的本质就可以轻松hold住这堆东西了。
+<!--more-->
+
+##常用的类
+###表示类
+
+* `java.util.Date` :能够准确记录到毫秒级别的时间表示类，但是其中的各种get set(修改时间或者获取时间中某一个特殊参数)都已经被废弃。
+* `java.sql.Date` :为数据库提供的日期类，继承自`util`包中的`Date`，但是这个类只能够操作日期，不能读取或者修改时间。**sql和util中Date内部进行存储的long，都可以保存到毫秒级别**
+* `java.sql.Time` :为数据库提供的时间类，和`Date`相反，它只能获取和操作时间相关的信息。
+* `java.sql.Timestamp`:时间戳，继承`util.Date`，它不仅能够完美支持`util.Date`的功能，而且可以支持到纳秒级别(10^-9 s)。
+
+###工具类
+* `Calendar`:主要用来操作一个`Date`类型，提供了一系列接口来获取或修改其中的信息。
+* `TimeZone`:用来配合`Calendar`	操作`Date`，主要是考虑时区的问题，值得注意的是，在`Date`中存储的信息是一个**绝对标准时间(稍后说明)**，而如果需要进行时区的转化，那么只需要配合此类即可。
+* `SimpleDateFormat`:常用的格式化`Date`的工具，主要是进行`String`和日期之间的互换。
+
+##基本概念
+###时间的来源
+注意，这里并不是讨论一个哲学的问题，在大部分的编程语言中，我们都是采用从1970-01-01 00:00:00.000 开始至今的毫秒差作为表示时间的数值，**这个时间是绝对公立的，它和时区没有任何关系**。在Java中任何时间的表示类的底层存储的毫秒数都是一个这样的标准时间。
+
+在java中获取当前时间接口是`System.currentTimeMillis()`。
+
+值得一提的是Java还提供了一个更加精确的时间：`System.nanoTime()`，获取一个时间精确到纳秒，但是它并不是一个当前的精确时间，而是JVM提供的一个时间，它的主要用途是来精确衡量两个时间段之间的时间，如计算一段代码的执行时间：
+
+		long startTime = System.nanoTime();
+       // ... the code being measured ...
+       long estimatedTime = System.nanoTime() - startTime;
+       
+可以比较两个接口返回的内容：
+    `System.currentTimeMillis()`:1429108246639
+    `System.nanoTime()`:1429108246640(ms)089000------->多了6位
+    
+###UTC和GMT
+
+这两个标准唯一不同之处在于UTC是基于GMT进行微调之后的一个时间，本文不去深究这两者的差别，在此认为这两者是一个东西。
+
+初中地理教过我们，地球是24个时区，东部和西部各12个，时区的基准点是伦敦(基准UTC)，往东，会领先UTC，往西，会落后UTC。
+
+如北京属于东八区，那么我们的时间会领先基准，也就是我们在早上9点时，伦敦是早上1点。如果我们在不同时区接发邮件的时候，可以发现这个问题。
+
+这个时间是我收到一份来自华盛顿的邮件的时间：
+
+2014年1月23日(星期四) 晚上7:29 (UTC-05:00 华盛顿、多伦多、古巴、智利时间)
+
+这里我们可以在邮件时间后面发现`UTC-05:00`，说明这里是落后UTC基准5个小时。注意，前面的时间是发件人的本地时间，如果转化成北京所在时区的时间应该是加上13h，那我收到这封邮件的本地时间是：2014-01-24 星期五早上8:29。
+
+###再谈TimeStamp
+
+前面说了，TimeStamp能够精确到纳秒，那它是怎么做到的呢？由于TimeStamp继承自`Date`，它把整数秒存储在超类中，而在子类中专门用一个long类型存储零的秒数:`nanos`
+
+需要注意，除非你显示去调用TimeStamp的这个构造器:
+`public Timestamp(int year, int month, int date,
+                     int hour, int minute, int second, int nano)`
+                     
+显示去指定nano的值，否则这个构造器的参数
+`public Timestamp(long time)`
+
+的单位实际上是毫秒。
+
+## API的使用
+
+最后再来说说日期时间的操作接口，过程基本如下图：
+
+	           SimpleDateFormat <------>  Date   <---------> Calendar
+	          
+Date负责存储一个绝对时间，并对两边提供操作接口。Calendar负责对Date中特定信息，比如这个时间是改年的第几个星期，此外，还可以通过set,add,roll接口来进行日期时间的增减。SimpleDateFormat主要作为一些格式化的输入输出。
+
+### SimpleDateFormat
+
+`SimpleDateFormat`的构造器接受一个String pattern，其中的pattern是预定义的：
+
+	G 年代标志符
+	y 年
+	M 月
+	d 日
+	h 时 在上午或下午 (1~12)
+	H 时 在一天中 (0~23)
+	m 分
+	s 秒
+	S 毫秒
+	E 星期
+	D 一年中的第几天
+	F 一月中第几个星期几
+	w 一年中第几个星期
+	W 一月中第几个星期
+	a 上午 / 下午 标记符 
+	k 时 在一天中 (1~24)
+	K 时 在上午或下午 (0~11)
+	z 时区
+	
+例子1：
+
+	 SimpleDateFormat DATETIME_FORMATER_WITHWEEK = new SimpleDateFormat(
+                "yyyy-MM-dd E HH:mm");
+
+        java.util.Date date = new java.util.Date();
+        System.out.println(DATETIME_FORMATER_WITHWEEK.format(date));
+        
+        //output: 2015-04-15 星期三 23:59 
+        //当然，反过来，我也可以使用这个format将output的字符串转化成Date
+        
+
+###Calendar
+
+Calendar中主要需要了解的各种操作域，感觉这也是Java在做这个API时的一个败笔，灵活有余，可控性不足，初学者如果乱用域，将会产生各种bug。至于每一个域对应的时间分量，请自行google。
+
+一些常用的filed：
+
+* YEAR:年
+* MONTH：月（从0 开始，0 表示1月....11表示12月）
+* DAY_OF_MONTH :几号（等同DATE）
+* DAY_OF_WEEK：星期几
+* DAY_OF_YEAR：年里面的天
+* DATE:几号（等同DAY_OF_MONTH）
+
+一个filed通常来说对应了日期时间中的某一个分量，在操作这个分类有些操作会向高位进位，而有的操作则不会【**bug高发区域**】。
+
+例子2：
+
+	SimpleDateFormat DATETIME_FORMATER_WITHWEEK = new SimpleDateFormat(
+         "yyyy-MM-dd E");
+        Calendar calendarT = Calendar.getInstance(Locale.CHINA);
+        System.out.println(DATETIME_FORMATER_WITHWEEK.format(calendarT.getTime()));
+        calendarT.set(Calendar.MONTH,12);// 月份进位
+        System.out.println(DATETIME_FORMATER_WITHWEEK.format(calendarT.getTime()));
+        //output:	2015-04-16 星期四
+						2016-01-16 星期六
+						
+例子3：
+
+	        SimpleDateFormat DATETIME_FORMATER_WITHWEEK = new SimpleDateFormat(
+         "yyyy-MM-dd E");
+        Calendar calendarT = Calendar.getInstance(Locale.CHINA);
+        System.out.println("原始    :"+DATETIME_FORMATER_WITHWEEK.format(calendarT.getTime()));
+        calendarT.set(Calendar.DAY_OF_MONTH,1);// 当月第一天
+        System.out.println("当月第一天:"+DATETIME_FORMATER_WITHWEEK.format(calendarT.getTime()));
+        //roll不会进位
+        calendarT.roll(Calendar.DATE,-1);
+        System.out.println("roll -1:"+DATETIME_FORMATER_WITHWEEK.format(calendarT.getTime()));
+        calendarT.set(Calendar.DAY_OF_MONTH,1);// 当月第一天
+        calendarT.add(Calendar.DATE,-1);
+        //add产生进位
+        System.out.println("add -1:"+DATETIME_FORMATER_WITHWEEK.format(calendarT.getTime()));
+        
+        //output:原始    :2015-04-16 星期四
+					当月第一天:2015-04-01 星期三
+					roll -1:2015-04-30 星期四
+					add -1:2015-03-31 星期二
+					
+最后还是需要说明一点，获取当前时间指的是当前本地时间对应的UTC时间，和时区没有关系！有点绕，没关系看代码：
+
+例子4：
+
+	Calendar calendar1 = Calendar.getInstance(Locale.CHINA);
+        Calendar calendar2 = Calendar.getInstance(Locale.GERMAN);
+        System.out.println(calendar1.getTimeInMillis());
+        System.out.println(calendar2.getTimeInMillis());
+        
+        //output:
+        	1429115150117
+			1429115150117
+			
+最后贴一个日期处理开源库：[**joda-time**](https://github.com/JodaOrg/joda-time)
