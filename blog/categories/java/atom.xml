@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Java | 楚云之南]]></title>
   <link href="http://chuyun923.github.io/blog/categories/java/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2015-04-16T00:33:34+08:00</updated>
+  <updated>2015-07-14T13:58:56+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -12,6 +12,75 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Java泛型]]></title>
+    <link href="http://chuyun923.github.io/blog/2015/05/04/javafan-xing/"/>
+    <updated>2015-05-04T10:14:20+08:00</updated>
+    <id>http://chuyun923.github.io/blog/2015/05/04/javafan-xing</id>
+    <content type="html"><![CDATA[<h1>Java基础知识点之泛型</h1>
+
+<h2>关键词</h2>
+
+<h2>泛型基础</h2>
+
+<h3>神马是泛型</h3>
+
+<p>便于程序员编写的一份代码可以用于多个类型，希望类或者方法具有通用的表达能力。</p>
+
+<h2>泛型进阶</h2>
+
+<h2>通配符</h2>
+
+<h3>为什么需要</h3>
+
+<p>例子：</p>
+
+<pre><code>public class Parent { }
+public class Child1 extends Parent { }
+public class Child2 extends Parent { }
+
+List&lt;Parent&gt; parents = new ArrayList&lt;Parent&gt;();
+List&lt;Child1&gt; child1s = new ArrayList&lt;Child1&gt;();
+</code></pre>
+
+<p><code>parents</code> 和 <code>child1s</code>能相互赋值么？</p>
+
+<pre><code>parents ＝ child1s;    //no,parents.add(child2Object)，就破坏了child1s的安全性
+child1s = parents;  //no,child1s.get()有可能得到非Child1类型对象，就破坏了child1s的安全性
+</code></pre>
+
+<p>为什么有时候需要这种表达呢？考虑如下情况：</p>
+
+<pre><code>public void printElements(List&lt;Parent&gt; elements){
+    for(Parent o : elements){
+        //假设，在Parent中定义了getSomeValue方法
+        System.out.println(o.getSomeValue());
+    }
+}
+</code></pre>
+
+<p>我们需要打印所有<code>Parent</code>类型集合中的元素，但是我们不能将 <code>child1s</code>作为实参传送给<code>printElements(child1s) //inlegal</code></p>
+
+<h3>怎么使用</h3>
+
+<p>通配符的使用方式一共有三种：</p>
+
+<pre><code>List&lt;?&gt;           listUknown = new ArrayList&lt;Parent&gt;();
+List&lt;? extends Parent&gt; listUknown = new ArrayList&lt;Parent&gt;();
+List&lt;? super  Parent&gt; listUknown = new ArrayList&lt;Parent&gt;();
+</code></pre>
+
+<p>List&lt;?>表示集合中的类型未知，但是可以确定的是它们都是一个类型，为了保证安全性，List&lt;?>只可以进行读操作。</p>
+
+<h2>数组协变</h2>
+
+<p>所谓协变，指的是 子类sub的数组sub[]是父类super的数组super[]的子类型。</p>
+
+<pre><code>Object[] objs = new String[1];
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Java中日期时间API小结]]></title>

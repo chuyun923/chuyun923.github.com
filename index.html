@@ -9,7 +9,7 @@
   <meta name="author" content="楚云">
 
   
-  <meta name="description" content="Java中为处理日期和时间提供了大量的API，确实有把一件简单的事情搞复杂的嫌疑，各种类：Date Time Timestamp Calendar...，但是如果能够看到时间处理的本质就可以轻松hold住这堆东西了。 ">
+  <meta name="description" content="Android 视图树状态保存 FragmentTabHost引起的思考 公司的项目是一个标准的FragmentTabHost与Fragment构成的四TAB布局。其中三个TAB中都包含有ListView来展现一个列表。用户在切换TAB时，ListView的当前位置会自动被保存， &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -65,6 +65,427 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/07/13/android-viezhuang-tai-bao-cun/">Android 视图树状态保存</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-07-13T18:13:40+08:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>6:13 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h1>Android 视图树状态保存</h1>
+
+<h2>FragmentTabHost引起的思考</h2>
+
+<p>公司的项目是一个标准的<code>FragmentTabHost</code>与<code>Fragment</code>构成的四TAB布局。其中三个TAB中都包含有<code>ListView</code>来展现一个列表。用户在切换TAB时，<code>ListView</code>的当前位置会自动被保存，切换回来之后会自动滚动到上次的位置。</p>
+
+<p>我们知道<code>FragmentTabHost</code>内部对于<code>Fragment</code>的切换使用的是<code>attach</code>和dettach，此时必然会走Fragment的视图树的重建，也就是在切换tab的时候，fragment的UI元素会进行重建，当然也包括重建其中的ListView。那为什么在重建之后Listview能找到正确位置？为了找到解释，我开始查阅代码。</p>
+
+<p>第一个想法是否是我们通过Fragment的onSaveInstanceState和Bundle来保存的呢？但是看Fragment中的方法并没有任何代码进行保存，也没有进行恢复。</p>
+
+<p>有人告诉我是通过Adapter来进行保存的，因为我们的Fragment会持有listview使用的ListAdapter，所以在重建的时候listadapter实际上复用之前的adapter，但是，通查adapter的代码，发现并没有任何保存当前位置的代码。</p>
+
+<p>这样不科学的事情怎么会发生？一个新创建出来的ListView居然会保存之前一个ListView的状态？</p>
+
+<h2>Android View状态保存</h2>
+
+<p>我们经常有这样的经验，在一个EditText中我们输入一些文字，在屏幕翻转时，EditText进行重建，其中的文字还会保留(前提是你为这个EditText指定了ID)。
+解释这个问题，我们需要从Android的View状态保存机制说起。</p>
+
+<p>在View中Android定义了<code>saveHierarchyState</code>，它用来保存这个View所在的视图树的状态，传进来的参数是父view保存的状态，看到这里，你应该已经意识到了这又是android View中常用的递归伎俩。</p>
+
+<pre><code>    public void saveHierarchyState(SparseArray&lt;Parcelable&gt; container) {
+        dispatchSaveInstanceState(container);
+     }
+
+    protected void dispatchSaveInstanceState(SparseArray&lt;Parcelable&gt; container) {
+      //这里可以看到如果你不指定view的ID，系统是不会给你保存view的状态的
+    if (mID != NO_ID &amp;&amp; (mViewFlags &amp; SAVE_DISABLED_MASK) == 0) {
+        mPrivateFlags &amp;= ~PFLAG_SAVE_STATE_CALLED;
+        //获取当前View需要保存的Parcelable
+        Parcelable state = onSaveInstanceState();
+        if ((mPrivateFlags &amp; PFLAG_SAVE_STATE_CALLED) == 0) {
+            throw new IllegalStateException(
+                    "Derived class did not call super.onSaveInstanceState()");
+        }
+        if (state != null) {
+            // Log.i("View", "Freezing #" + Integer.toHexString(mID)
+            // + ": " + state);
+
+            //妈蛋，直接是简单粗暴的 viewId ----&gt; Parcelable的映射
+            container.put(mID, state);
+        }
+    }
+}
+</code></pre>
+
+<p>从上面的代码，我们可以大致想象一下saveHierarchySate的过程，顶层的view调用saveHierarchyState,然后dispatchSaveInstanceState保存自己，为了让递归走下去，我们都能想象到在ViewGroup中的dispatchSaveInstanceState会调用子View的saveHierachySate，是不是这样呢，搂一眼ViewGroup中的代码：</p>
+
+<pre><code>@Override
+protected void dispatchSaveInstanceState(SparseArray&lt;Parcelable&gt; container) {
+    //先把自己放到SparseArray中
+    super.dispatchSaveInstanceState(container);
+    final int count = mChildrenCount;
+    final View[] children = mChildren;
+    //保存孩儿们的状态
+    for (int i = 0; i &lt; count; i++) {
+        View c = children[i];
+        if ((c.mViewFlags &amp; PARENT_SAVE_DISABLED_MASK) != PARENT_SAVE_DISABLED) {
+            c.dispatchSaveInstanceState(container);
+        }
+    }
+}
+</code></pre>
+
+<p>看到这里，相信你已经迫不及待想要看顶层View是在什么时机保存视图树信息的，Activity中的<code>onSaveInstanceState</code>有如下语句：</p>
+
+<pre><code>outState.putBundle(WINDOW_HIERARCHY_TAG, mWindow.saveHierarchyState());
+</code></pre>
+
+<p>这里调用了跟到PhoneWindow.saveHierarchyState(),</p>
+
+<pre><code>SparseArray&lt;Parcelable&gt; states = new SparseArray&lt;Parcelable&gt;();
+mContentParent.saveHierarchyState(states);
+</code></pre>
+
+<p>这里交代地很清楚明白。ok，总结一下这个流程</p>
+
+<p>Acitvity在状态需要保存时，直接new了一个SparseArray，建立movieId和Parcelable的映射，其中每一个View都会使用一个Parcelable来序列化需要保存的内容，ViewGroup在保存了自己的同时，也会去调用子类的保存状态的方法，并把上面传下来的SparseArray一直往下传。</p>
+
+<h2>视图树状态恢复</h2>
+
+<p><strong>视图树保存下来的SparsesArray不是被ViewGroup自己持有(避免View被重新new出来，这些信息丢失，这也是前面疑惑的根源)。</strong>以Activity为例，我们可以看到整个视图树状态保存之后会放到一个Bundle中，那我们来看看视图树是如何恢复的。</p>
+
+<p>在Activity的<code>onRestoreInstanceState</code>中</p>
+
+<pre><code>    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        if (mWindow != null) {
+        Bundle windowState = savedInstanceState.getBundle(WINDOW_HIERARCHY_TAG);
+        if (windowState != null) {
+            mWindow.restoreHierarchyState(windowState);
+        }
+        }
+    }
+</code></pre>
+
+<p>跟到PhoneWindow中的<code>restoreHierarchyState</code></p>
+
+<pre><code>    SparseArray&lt;Parcelable&gt; savedStates = savedInstanceState.getSparseParcelableArray(VIEWS_TAG);
+    if (savedStates != null) {
+        mContentParent.restoreHierarchyState(savedStates);
+    }
+</code></pre>
+
+<p>从Bundle中拿出之前保存的SparseArray，丢给顶层View的restoreHierarchyState</p>
+
+<pre><code>    public void restoreHierarchyState(SparseArray&lt;Parcelable&gt; container) {
+    dispatchRestoreInstanceState(container);
+    }
+
+    protected void dispatchRestoreInstanceState(SparseArray&lt;Parcelable&gt; container) {
+    if (mID != NO_ID) {
+          //拿到当前View的id对应的Parcelable，注意，这个Parcelable很有可能是之前id相同的View保存的
+        Parcelable state = container.get(mID);
+        if (state != null) {
+            // Log.i("View", "Restoreing #" + Integer.toHexString(mID)
+            // + ": " + state);
+            mPrivateFlags &amp;= ~PFLAG_SAVE_STATE_CALLED;
+            onRestoreInstanceState(state);
+            if ((mPrivateFlags &amp; PFLAG_SAVE_STATE_CALLED) == 0) {
+                throw new IllegalStateException(
+                        "Derived class did not call super.onRestoreInstanceState()");
+            }
+        }
+    }
+    }
+</code></pre>
+
+<p>调用到View的<code>onRestoreInstanceState</code>，这里让子类去处理拿出的信息。</p>
+
+<p>到这里，可以猜到在ViewGroup的<code>dispatchRestoreInstanceState</code>调用super方法(恢复自己)，同时应该会去恢复所有子View，这里不上代码了。</p>
+
+<h2>回到Fragment状态保存的问题</h2>
+
+<p>虽然<code>attach</code>和<code>dettach</code>并不会引起Activity的状态保存，但是由于视图树保存状态的机制可以知道，Fragment也可以只保留自己所持有的View，然后恢复Fragment的视图树。</p>
+
+<p>在FragmentManager的<code>moveToState</code>方法中，调用了<code>saveFragmentViewState</code></p>
+
+<pre><code>void saveFragmentViewState(Fragment f) {
+    if (f.mView == null) {
+        return;
+    }
+    if (mStateArray == null) {
+        mStateArray = new SparseArray&lt;Parcelable&gt;();
+    } else {
+        mStateArray.clear();
+    }
+    //f.mView是Fragment的顶层View
+    f.mView.saveHierarchyState(mStateArray);
+    if (mStateArray.size() &gt; 0) {
+        f.mSavedViewState = mStateArray;
+        mStateArray = null;
+    }
+}
+</code></pre>
+
+<p> 往下走和Activity恢复视图树的过程一样鸟！</p>
+
+<p> 这样看起来，ListView能够恢复到上次保存的位置，可以看到AbsListView中的<code>onSaveInstanceState</code>和<code>onRestoreInstanceState</code>进行了保存和恢复，其中保存一个变量 <code>mSyncPosition = ss.position;</code></p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/05/04/pythonbi-ji/">Python笔记</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-05-04T22:05:04+08:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>4</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>10:05 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h2>Python语言简介</h2>
+
+<p>Python是一种解释执行的高级脚本语言。解释执行意味着Python代码的执行需要一个类似JVM的运行环境，与JVM类似，Python也存在多个不同的解析器(运行环境)，比如我们最常用的CPython，这是一个官方版本使用C编写的解析器。</p>
+
+<p>Python的代码有两种执行方式</p>
+
+<ol>
+<li>交互式。直接在命令行输入python，进入交互模式，退出交互模式的方法有输入 <code>exit()</code> 或者 <code>Ctrl+D</code></li>
+<li>源文件。使用<code>.py</code>后缀来保存python脚本。</li>
+</ol>
+
+
+<h2>源文件组织行</h2>
+
+<p>在Linux/Unix环境中，我们可以在源文件的第一行指定一个注释组织行，指定当前系统执行程序的解析器的位置。</p>
+
+<pre><code>#!/usr/bin/python    //#!开头
+</code></pre>
+
+<p>同时，我们给文件增加 <code>x</code> 执行权限</p>
+
+<pre><code>chmod a+x *.py
+</code></pre>
+
+<p>如此一来，我们可以直接输入文件名来执行程序，这样指定的源程序的后缀不一定要是<code>.py</code></p>
+
+<h2>基本类型</h2>
+
+<h3>数据类型</h3>
+
+<ol>
+<li>整数，长整数</li>
+<li>浮点数</li>
+<li>复数</li>
+</ol>
+
+
+<h3>字符串</h3>
+
+<p>使用方法和转义字符基本上和其他语言差不多，字符串也是不可改变的。</p>
+
+<h3>布尔值</h3>
+
+<p>True or False  注意大小写
+提供了 <code>and or not</code>运算。</p>
+
+<h3>变量</h3>
+
+<p>Python对于变量的命名和Java一样，但是Python和JS一样，是动态语言，即变量可以被多次赋值，而且可以每次赋值的类型不一样。</p>
+
+<h2>语法</h2>
+
+<h3>逻辑行和物理行</h3>
+
+<p>物理行是你在编写程序时所看见的。逻辑行是<code>Python</code>看见的单个语句。<code>Python</code>假定每个物理行对应一个 逻辑行。如果一个逻辑行需要占用多个物理行，那么可以通过<code>\</code>来进行连接。如：</p>
+
+<pre><code>print \
+i
+</code></pre>
+
+<h3>缩进</h3>
+
+<p>空白在python语法中占有较为重要的位置，它用来作为代码块分组的选择。</p>
+
+<h3>运算符</h3>
+
+<p>下面仅列出和<code>Java</code>不一样的地方</p>
+
+<ol>
+<li>** 幂  x的y次幂</li>
+<li>// 整除，取整数部分</li>
+<li><code>not and or</code> 对应 <code>! &amp;&amp; ||</code></li>
+</ol>
+
+
+<h3>if</h3>
+
+<pre><code>if boolean:
+    some code
+elif boolean:   //else if
+    some code
+else:
+    some code
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/05/04/javafan-xing/">Java泛型</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-05-04T10:14:20+08:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>4</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>10:14 am</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h1>Java基础知识点之泛型</h1>
+
+<h2>关键词</h2>
+
+<h2>泛型基础</h2>
+
+<h3>神马是泛型</h3>
+
+<p>便于程序员编写的一份代码可以用于多个类型，希望类或者方法具有通用的表达能力。</p>
+
+<h2>泛型进阶</h2>
+
+<h2>通配符</h2>
+
+<h3>为什么需要</h3>
+
+<p>例子：</p>
+
+<pre><code>public class Parent { }
+public class Child1 extends Parent { }
+public class Child2 extends Parent { }
+
+List&lt;Parent&gt; parents = new ArrayList&lt;Parent&gt;();
+List&lt;Child1&gt; child1s = new ArrayList&lt;Child1&gt;();
+</code></pre>
+
+<p><code>parents</code> 和 <code>child1s</code>能相互赋值么？</p>
+
+<pre><code>parents ＝ child1s;    //no,parents.add(child2Object)，就破坏了child1s的安全性
+child1s = parents;  //no,child1s.get()有可能得到非Child1类型对象，就破坏了child1s的安全性
+</code></pre>
+
+<p>为什么有时候需要这种表达呢？考虑如下情况：</p>
+
+<pre><code>public void printElements(List&lt;Parent&gt; elements){
+    for(Parent o : elements){
+        //假设，在Parent中定义了getSomeValue方法
+        System.out.println(o.getSomeValue());
+    }
+}
+</code></pre>
+
+<p>我们需要打印所有<code>Parent</code>类型集合中的元素，但是我们不能将 <code>child1s</code>作为实参传送给<code>printElements(child1s) //inlegal</code></p>
+
+<h3>怎么使用</h3>
+
+<p>通配符的使用方式一共有三种：</p>
+
+<pre><code>List&lt;?&gt;           listUknown = new ArrayList&lt;Parent&gt;();
+List&lt;? extends Parent&gt; listUknown = new ArrayList&lt;Parent&gt;();
+List&lt;? super  Parent&gt; listUknown = new ArrayList&lt;Parent&gt;();
+</code></pre>
+
+<p>List&lt;?>表示集合中的类型未知，但是可以确定的是它们都是一个类型，为了保证安全性，List&lt;?>只可以进行读操作。</p>
+
+<h2>数组协变</h2>
+
+<p>所谓协变，指的是 子类sub的数组sub[]是父类super的数组super[]的子类型。</p>
+
+<pre><code>Object[] objs = new String[1];
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/04/16/android-provider/">Android Content Provider</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-04-16T10:58:35+08:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>16</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>10:58 am</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><code>ContentProvider</code>作为Android应用之间共享数据的桥梁，为共享数据提供了一个统一的访问方式(一套统一的接口)。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2015/04/16/android-provider/">展开全文</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -296,151 +717,6 @@ compile&ndash;>compileTest&ndash;>test&ndash;>dist(每个task都只执行一遍)
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/19/androidzhi-cai-dan/">Android之菜单</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-12-19T17:19:36+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>19</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>5:19 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>本文参考自官方文档：<a href="https://developer.android.com/guide/topics/ui/menus.html">https://developer.android.com/guide/topics/ui/menus.html</a></p>
-
-<p>Android为了维护app之间一个统一的操作习惯，提供了Menus来处理用户和Activity之间的一些交互。但是在不同的系统版本上面推荐的Menu不一样。比如在android 3.0以下，由于Google会要求所有设备生产商提供一个菜单的实体键，所以在3.0一下菜单的主要弹出方式就是点击菜单实体键，弹出6个条目的菜单面板。在3.0以后，引入ActionBar，打开菜单行为转变成点击ActionBar上面的overflow按钮。这两种菜单面板的操作一般都是影响到整个app的操作。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/12/19/androidzhi-cai-dan/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/16/httpclient/">HttpClient</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-12-16T12:20:26+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>16</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>12:20 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Http协议是在开发中使用最多的网络协议，大部分的网络接口都是通过Http来设计。在Android中提供了两种Http客户端，HttpClient和HttpUrlConnetion。其中后者在低版本存在某些问题，但是HttpClient尽管功能强大，但使用麻烦，接口众多，本文主要是简单介绍HttpClient中使用的一些概念。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/12/16/httpclient/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/14/geniousadapter-kuai-su-gou-jian-adapter/">geniousadapter,快速构建Adapter</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-12-14T20:28:32+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>8:28 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>项目地址：<a href="https://github.com/chuyun923/ingenious-adapter"><strong>geniousadapter</strong></a><br/>
-前面的话：本项目的原型是<a href="https://github.com/JoanZapata/base-adapter-helper">QuickAdapter</a>，它们的思路基本一致，但本项目的优势在于：</p>
-
-<ul>
-<li>支持AdapterView存在多个layout类型</li>
-<li>可配置图片加载缓存库</li>
-</ul>
-
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/12/14/geniousadapter-kuai-su-gou-jian-adapter/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/04/javazhong-de-fan-xing-fang-fa/">Java中的泛型方法</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-12-04T16:36:56+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>4</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>4:36 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>在通过反射获取类的私有域时希望写一个方法，可以指定一个域的名字和域的类型，可以返回指定类型的对象。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/12/04/javazhong-de-fan-xing-fang-fa/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/posts/2">&larr; Older</a>
@@ -456,23 +732,23 @@ compile&ndash;>compileTest&ndash;>test&ndash;>dist(每个task都只执行一遍)
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/07/13/android-viezhuang-tai-bao-cun/">Android 视图树状态保存</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/05/04/pythonbi-ji/">Python笔记</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/05/04/javafan-xing/">Java泛型</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/04/16/android-provider/">Android Content Provider</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/04/15/">Java中日期时间API小结</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/02/05/gradlezhi-nan-11/">Gradle指南-11</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码(二)之JsonReader和JsonWriter</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/01/09/hashmaxiao-lu-fen-xi/">HashMa效率分析</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析(一)之Json结构抽象和注解使用</a>
       </li>
     
   </ul>
@@ -484,8 +760,9 @@ compile&ndash;>compileTest&ndash;>test&ndash;>dist(每个task都只执行一遍)
 <section>
     <h1>文章分类</h1>
     <ul id="categories">
-        <li class='category'><a href='/blog/categories/android/'>android (7)</a></li>
-<li class='category'><a href='/blog/categories/java/'>java (3)</a></li>
+        <li class='category'><a href='/blog/categories/android/'>android (9)</a></li>
+<li class='category'><a href='/blog/categories/java/'>java (4)</a></li>
+<li class='category'><a href='/blog/categories/python/'>python (1)</a></li>
 <li class='category'><a href='/blog/categories/网络协议-http/'>网络协议/http (1)</a></li>
 <li class='category'><a href='/blog/categories/闲记/'>闲记 (1)</a></li>
 

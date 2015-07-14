@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Android | 楚云之南]]></title>
   <link href="http://chuyun923.github.io/blog/categories/android/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2015-04-16T00:33:34+08:00</updated>
+  <updated>2015-07-14T13:58:56+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -12,6 +12,236 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Android 视图树状态保存]]></title>
+    <link href="http://chuyun923.github.io/blog/2015/07/13/android-viezhuang-tai-bao-cun/"/>
+    <updated>2015-07-13T18:13:40+08:00</updated>
+    <id>http://chuyun923.github.io/blog/2015/07/13/android-viezhuang-tai-bao-cun</id>
+    <content type="html"><![CDATA[<h1>Android 视图树状态保存</h1>
+
+<h2>FragmentTabHost引起的思考</h2>
+
+<p>公司的项目是一个标准的<code>FragmentTabHost</code>与<code>Fragment</code>构成的四TAB布局。其中三个TAB中都包含有<code>ListView</code>来展现一个列表。用户在切换TAB时，<code>ListView</code>的当前位置会自动被保存，切换回来之后会自动滚动到上次的位置。</p>
+
+<p>我们知道<code>FragmentTabHost</code>内部对于<code>Fragment</code>的切换使用的是<code>attach</code>和dettach，此时必然会走Fragment的视图树的重建，也就是在切换tab的时候，fragment的UI元素会进行重建，当然也包括重建其中的ListView。那为什么在重建之后Listview能找到正确位置？为了找到解释，我开始查阅代码。</p>
+
+<p>第一个想法是否是我们通过Fragment的onSaveInstanceState和Bundle来保存的呢？但是看Fragment中的方法并没有任何代码进行保存，也没有进行恢复。</p>
+
+<p>有人告诉我是通过Adapter来进行保存的，因为我们的Fragment会持有listview使用的ListAdapter，所以在重建的时候listadapter实际上复用之前的adapter，但是，通查adapter的代码，发现并没有任何保存当前位置的代码。</p>
+
+<p>这样不科学的事情怎么会发生？一个新创建出来的ListView居然会保存之前一个ListView的状态？</p>
+
+<h2>Android View状态保存</h2>
+
+<p>我们经常有这样的经验，在一个EditText中我们输入一些文字，在屏幕翻转时，EditText进行重建，其中的文字还会保留(前提是你为这个EditText指定了ID)。
+解释这个问题，我们需要从Android的View状态保存机制说起。</p>
+
+<p>在View中Android定义了<code>saveHierarchyState</code>，它用来保存这个View所在的视图树的状态，传进来的参数是父view保存的状态，看到这里，你应该已经意识到了这又是android View中常用的递归伎俩。</p>
+
+<pre><code>    public void saveHierarchyState(SparseArray&lt;Parcelable&gt; container) {
+        dispatchSaveInstanceState(container);
+     }
+
+    protected void dispatchSaveInstanceState(SparseArray&lt;Parcelable&gt; container) {
+      //这里可以看到如果你不指定view的ID，系统是不会给你保存view的状态的
+    if (mID != NO_ID &amp;&amp; (mViewFlags &amp; SAVE_DISABLED_MASK) == 0) {
+        mPrivateFlags &amp;= ~PFLAG_SAVE_STATE_CALLED;
+        //获取当前View需要保存的Parcelable
+        Parcelable state = onSaveInstanceState();
+        if ((mPrivateFlags &amp; PFLAG_SAVE_STATE_CALLED) == 0) {
+            throw new IllegalStateException(
+                    "Derived class did not call super.onSaveInstanceState()");
+        }
+        if (state != null) {
+            // Log.i("View", "Freezing #" + Integer.toHexString(mID)
+            // + ": " + state);
+
+            //妈蛋，直接是简单粗暴的 viewId ----&gt; Parcelable的映射
+            container.put(mID, state);
+        }
+    }
+}
+</code></pre>
+
+<p>从上面的代码，我们可以大致想象一下saveHierarchySate的过程，顶层的view调用saveHierarchyState,然后dispatchSaveInstanceState保存自己，为了让递归走下去，我们都能想象到在ViewGroup中的dispatchSaveInstanceState会调用子View的saveHierachySate，是不是这样呢，搂一眼ViewGroup中的代码：</p>
+
+<pre><code>@Override
+protected void dispatchSaveInstanceState(SparseArray&lt;Parcelable&gt; container) {
+    //先把自己放到SparseArray中
+    super.dispatchSaveInstanceState(container);
+    final int count = mChildrenCount;
+    final View[] children = mChildren;
+    //保存孩儿们的状态
+    for (int i = 0; i &lt; count; i++) {
+        View c = children[i];
+        if ((c.mViewFlags &amp; PARENT_SAVE_DISABLED_MASK) != PARENT_SAVE_DISABLED) {
+            c.dispatchSaveInstanceState(container);
+        }
+    }
+}
+</code></pre>
+
+<p>看到这里，相信你已经迫不及待想要看顶层View是在什么时机保存视图树信息的，Activity中的<code>onSaveInstanceState</code>有如下语句：</p>
+
+<pre><code>outState.putBundle(WINDOW_HIERARCHY_TAG, mWindow.saveHierarchyState());
+</code></pre>
+
+<p>这里调用了跟到PhoneWindow.saveHierarchyState(),</p>
+
+<pre><code>SparseArray&lt;Parcelable&gt; states = new SparseArray&lt;Parcelable&gt;();
+mContentParent.saveHierarchyState(states);
+</code></pre>
+
+<p>这里交代地很清楚明白。ok，总结一下这个流程</p>
+
+<p>Acitvity在状态需要保存时，直接new了一个SparseArray，建立movieId和Parcelable的映射，其中每一个View都会使用一个Parcelable来序列化需要保存的内容，ViewGroup在保存了自己的同时，也会去调用子类的保存状态的方法，并把上面传下来的SparseArray一直往下传。</p>
+
+<h2>视图树状态恢复</h2>
+
+<p><strong>视图树保存下来的SparsesArray不是被ViewGroup自己持有(避免View被重新new出来，这些信息丢失，这也是前面疑惑的根源)。</strong>以Activity为例，我们可以看到整个视图树状态保存之后会放到一个Bundle中，那我们来看看视图树是如何恢复的。</p>
+
+<p>在Activity的<code>onRestoreInstanceState</code>中</p>
+
+<pre><code>    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        if (mWindow != null) {
+        Bundle windowState = savedInstanceState.getBundle(WINDOW_HIERARCHY_TAG);
+        if (windowState != null) {
+            mWindow.restoreHierarchyState(windowState);
+        }
+        }
+    }
+</code></pre>
+
+<p>跟到PhoneWindow中的<code>restoreHierarchyState</code></p>
+
+<pre><code>    SparseArray&lt;Parcelable&gt; savedStates = savedInstanceState.getSparseParcelableArray(VIEWS_TAG);
+    if (savedStates != null) {
+        mContentParent.restoreHierarchyState(savedStates);
+    }
+</code></pre>
+
+<p>从Bundle中拿出之前保存的SparseArray，丢给顶层View的restoreHierarchyState</p>
+
+<pre><code>    public void restoreHierarchyState(SparseArray&lt;Parcelable&gt; container) {
+    dispatchRestoreInstanceState(container);
+    }
+
+    protected void dispatchRestoreInstanceState(SparseArray&lt;Parcelable&gt; container) {
+    if (mID != NO_ID) {
+          //拿到当前View的id对应的Parcelable，注意，这个Parcelable很有可能是之前id相同的View保存的
+        Parcelable state = container.get(mID);
+        if (state != null) {
+            // Log.i("View", "Restoreing #" + Integer.toHexString(mID)
+            // + ": " + state);
+            mPrivateFlags &amp;= ~PFLAG_SAVE_STATE_CALLED;
+            onRestoreInstanceState(state);
+            if ((mPrivateFlags &amp; PFLAG_SAVE_STATE_CALLED) == 0) {
+                throw new IllegalStateException(
+                        "Derived class did not call super.onRestoreInstanceState()");
+            }
+        }
+    }
+    }
+</code></pre>
+
+<p>调用到View的<code>onRestoreInstanceState</code>，这里让子类去处理拿出的信息。</p>
+
+<p>到这里，可以猜到在ViewGroup的<code>dispatchRestoreInstanceState</code>调用super方法(恢复自己)，同时应该会去恢复所有子View，这里不上代码了。</p>
+
+<h2>回到Fragment状态保存的问题</h2>
+
+<p>虽然<code>attach</code>和<code>dettach</code>并不会引起Activity的状态保存，但是由于视图树保存状态的机制可以知道，Fragment也可以只保留自己所持有的View，然后恢复Fragment的视图树。</p>
+
+<p>在FragmentManager的<code>moveToState</code>方法中，调用了<code>saveFragmentViewState</code></p>
+
+<pre><code>void saveFragmentViewState(Fragment f) {
+    if (f.mView == null) {
+        return;
+    }
+    if (mStateArray == null) {
+        mStateArray = new SparseArray&lt;Parcelable&gt;();
+    } else {
+        mStateArray.clear();
+    }
+    //f.mView是Fragment的顶层View
+    f.mView.saveHierarchyState(mStateArray);
+    if (mStateArray.size() &gt; 0) {
+        f.mSavedViewState = mStateArray;
+        mStateArray = null;
+    }
+}
+</code></pre>
+
+<p> 往下走和Activity恢复视图树的过程一样鸟！</p>
+
+<p> 这样看起来，ListView能够恢复到上次保存的位置，可以看到AbsListView中的<code>onSaveInstanceState</code>和<code>onRestoreInstanceState</code>进行了保存和恢复，其中保存一个变量 <code>mSyncPosition = ss.position;</code></p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Android Content Provider]]></title>
+    <link href="http://chuyun923.github.io/blog/2015/04/16/android-provider/"/>
+    <updated>2015-04-16T10:58:35+08:00</updated>
+    <id>http://chuyun923.github.io/blog/2015/04/16/android-provider</id>
+    <content type="html"><![CDATA[<p><code>ContentProvider</code>作为Android应用之间共享数据的桥梁，为共享数据提供了一个统一的访问方式(一套统一的接口)。</p>
+
+<!--more-->
+
+
+<h2>URI</h2>
+
+<p>在Android中大量使用URI作为资源定位标识，它主要由 <code>scheme host(authority) path params组成</code>。例如我们有如下的一个<code>Content Provider</code>的URI如下：</p>
+
+<pre><code>content://www.chuyun923.com/books/10086/title/firstWord
+</code></pre>
+
+<p>其中<code>content</code>，是Android为Content Provider规定的scheme；
+PATH(<code>books/10086/title/firstWord</code>)可以直接表示用来操作的业务，表示书籍<code>_ID=10086</code>的书名的第一个单词。<strong>注意，我们可以在URI中定义各种奇葩的PATH来描述业务，但是的最终解释权归Content Provider的定义</strong></p>
+
+<p>既然我们可以指定一些PATH表示业务，那么<code>Content Provider</code>必然需要去解析各种PATH，然后提供各种匹配的处理逻辑，此时，UriMatcher应运而生。</p>
+
+<h3>UriMatcher</h3>
+
+<p>对一个给定的Uri进行HOST和PATH的匹配，而Scheme不在考虑范围。对于PATH的匹配主要是挨个去比较各个PATH参数是否相等。</p>
+
+<p>使用UriMatcher，首先需要给它配置一些配置URI，以及映射的<code>int</code>。</p>
+
+<pre><code>    private static final UriMatcher uriMatcher;
+    static{
+        uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
+        uriMatcher.addURI("net.manoel.provider.Books", "books", 1);
+        uriMatcher.addURI("net.manoel.provider.Books", "books/#/title", 2);
+        uriMatcher.addURI("net.manoel.provider.Books","books/#/title/firstword",3);
+    }
+</code></pre>
+
+<p>这里配置了三个业务PATH，第一个表示整个<code>books</code>整个表。第二URI表示指定Id的书名，第三个表示指定id的书名的首单词。</p>
+
+<p>那么，
+<code>books/12/title</code>将匹配第二个，在<code>Content Provider</code>收到这个<code>URI</code>时，可以使用<code>UriMatcher</code>得到2。
+UriMatcher为URI提供了两种通配符 <code>#</code>代表数字；<code>*</code>代表任意字符。</p>
+
+<p><strong>需要注意一点的是</strong>，<code>UriMatcher</code>进行匹配，会受到<code>addURI</code>的先后顺序影响。</p>
+
+<p>如：<code>uriMatcher</code>按以下顺序添加：</p>
+
+<pre><code>*/#
+#/*
+</code></pre>
+
+<p>那么 <code>9/title</code>将不能获得匹配，是不是很奇怪？</p>
+
+<pre><code>*/#/#
+*/*/*
+</code></pre>
+
+<p> <code>books/10/title</code>也不能被匹配。</p>
+
+<p>在匹配PATH是挨个参数进行，一旦一个路径参数被匹配，那么它就不会更换。
+以<code>books/10/title</code>来说，匹配第一个patten的第一个参数 * 通过，10 匹配 <code>#</code>也通过，title不能匹配#，那么此时进行第二个patten的匹配。那么第二个patten必须满足<code>*/#</code>开头，否则就算是 <code>*/*</code>也不能通过。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Gradle指南-11]]></title>
@@ -441,251 +671,6 @@ private int b = 2;
 </code></pre>
 
 <p>和Expose一样，要想Gson识别这两个注解，同样需要通过GsonBuilder.setVersion(double).create()来实现。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Android ActionBar]]></title>
-    <link href="http://chuyun923.github.io/blog/2014/12/23/android-actionbar/"/>
-    <updated>2014-12-23T10:58:00+08:00</updated>
-    <id>http://chuyun923.github.io/blog/2014/12/23/android-actionbar</id>
-    <content type="html"><![CDATA[<p>ActionBar作为Android3.0系统引入的一个重要的android app的风格，了解它的使用方法是每一个android开发者都必须要掌握的，本文主要基于android官方文档，对一些不常用的内容进行了删减，整理而成。</p>
-
-<!--more-->
-
-
-<p>说起3.0以后的ActionBar，其实在做3.0以前开发的童鞋应该有印象，Android提供了一个TitleBar，只不过默认的TitleBar只能显示一个标题和一个图标。它的样子大概如下：<br />
-<img src="http://androidpeople.files.wordpress.com/2009/12/withicon.jpg" alt="" /></p>
-
-<p>如果需要自己定义一个更加炫酷的Titlebar,比较麻烦，可以参考这篇文章：<a href="http://www.cnblogs.com/a284628487/archive/2013/06/07/3125265.html"><strong>自定义TitleBar</strong></a></p>
-
-<p>ActionBar是TitleBar的增强版本，主要包括四个部分：</p>
-
-<ol>
-<li>为app提供一个唯一图片标识和导航的button,如果当前页面不是应用的首页，应该在app icon的左边添加返回的剪头。</li>
-<li>切换界面上显示的view，官方名称叫view control。</li>
-<li>放置一些显式的按钮，长按会显示它的title</li>
-<li>放置一个action overflow</li>
-</ol>
-
-
-<p>对应如下图片：</p>
-
-<p><img src="https://developer.android.com/design/media/action_bar_basics.png" alt="" /></p>
-
-<p>正常的ActionBar会占据一定的屏幕空间，在ActionBar显示或者隐藏时，屏幕中的数据都会重绘去适应。如果我们需要ActionBar浮动在内容上面，可以将<code>windowActionBarOverlay</code>属性设置为true。</p>
-
-<h2>增加ActionBar的Item</h2>
-
-<p>在android菜单中曾经提到如何在ActionBar中增加菜单项，这里不再赘述。这里补充一个小的case：</p>
-
-<p> 在ActionBar上显示的item也可以同时显示icon和title，当然前提是ActionBar的空间富余。通过在showAsAction中增加withText。</p>
-
-<h2>分离的ActionBar(split)</h2>
-
-<p>在分辨率不大的设备上，如果有足够多的Item需要显示，可能面临着屏幕宽度不够而显示不了那么多的Icon。分离ActionBar中的logo和菜单项，将菜单项移动到屏幕的下面，如图：</p>
-
-<p><img src="https://developer.android.com/images/ui/actionbar-splitaction@2x.png" alt="" /></p>
-
-<p>如果需要系统处理，那么我们需要指定属性：<code>uiOptions="splitActionBarWhenNarrow"</code>，但是如果需要支持低版本，我们可以这样写：</p>
-
-<pre><code>    &lt;manifest ...&gt;
-        &lt;activity uiOptions="splitActionBarWhenNarrow" ... &gt;
-            &lt;meta-data android:name="android.support.UI_OPTIONS"
-               android:value="splitActionBarWhenNarrow" /&gt;
-        &lt;/activity&gt;
-    &lt;/manifest&gt;
-</code></pre>
-
-<h2>ActionBar的导航button</h2>
-
-<p>如果设置ActionBar.setDisplayHomeAsUpEnable(true),会产生一个导航按钮，如图所示：</p>
-
-<p><img src="https://developer.android.com/images/ui/actionbar-up.png" alt="" /></p>
-
-<p>这个按钮和系统的back按键的区别在于，系统的back键有时候仅仅是为了返回到屏幕的上一次状态，而点击这个导航键就会返回到上一次的界面。
-如果仅仅set这个导航键可见，它并不会响应任何操作，我们需要手动去指定点击这个导航键将会打开那个Activity，有两种方法可以来指定：</p>
-
-<ol>
-<li>在Menifest文件中通过activity的parentActivityname属性指定，当然这个属性是4.1加入的，如果要兼容之前的版本，可以通过meta的方式来做到。</li>
-<li>在Activity中复写getParentActivityIntent，可以指定在app内导航的Intent。在别的应用中打开app，可以通过复写onCreateNavigateUpTaskStack来实现。</li>
-</ol>
-
-
-<p>注意，在support v7包中的actionbarActivity中，对以上提供了默认实现。</p>
-
-<h2>ActionView</h2>
-
-<p>actionview是在点击action button之后，一个显示出来的交互view,如下图：</p>
-
-<p><img src="https://developer.android.com/images/ui/actionbar-searchview@2x.png" alt="" /></p>
-
-<p>可以通过Menu item的<code>actionViewClass</code>来指定一个widget。我们也可以直接自己指定一个自定义布局给Action button，只需要把layout的id赋值给<code>actionLayout</code>即可。</p>
-
-<p>app要获取这个Action View中的一些事件，可以在onCreateOptionsMenu中通过<code>menuItem.getActionView()</code>来获得。</p>
-
-<p>下面来说一个比较有意思的可折叠的actionview，前文可知，如果设置actionLayout，那么如果ActionBar上面空间足够时，会直接把这个自定义的layout显示出来，但是如果这个item被放到overflow里面去了呢？此时<code>showAction</code>中的一个属性<code>collapseActionView</code>的作用就会显示出来，这个属性的作用是：</p>
-
-<p>如果这个action button被放到overflow中，点击后还是可以把它的actionview打开(可折叠)，如果不加这个属性，那么系统将不会打开actionview。如果是打开折叠的actionview，ActionBar会自动把导航剪头加上，并且清空ActionBar上面的action button(除去overflow按钮)，如下图：</p>
-
-<p><img src="http://images.cnblogs.com/cnblogs_com/CSU-PL/637624/o_5B4AFB05-1AFC-4F4F-887F-304187E96E16.png" alt="" /></p>
-
-<p>我们可以在<code>onCreateOptionsMenu</code>中  通过<code>MenuItemCompat.setOnActionExpandListener</code>来监听actionview的扩张事件。</p>
-
-<h2>Action Provider</h2>
-
-<p>上一节提到的actionview，它是直接在ActionBar上面展示出来，ActionProvider是在ActionBar上展示一个下拉的菜单，如下图：</p>
-
-<p><img src="https://developer.android.com/images/ui/actionbar-shareaction@2x.png" alt="" /></p>
-
-<p>创建一个Action provider可以通过指定给<code>android:actionProviderClass</code>属性一个ActionProvider即可。</p>
-
-<h2>添加导航的tab</h2>
-
-<p>这种方式已经不被推荐使用了，所以这里不做详细解释，使用它很简单。</p>
-
-<h2>下拉导航</h2>
-
-<p>下拉导航是在ActionBar的左边提供一个action provider类似的下拉框，可以使用在改变界面内容的频率不频繁的情况下可以使用Drop-down Navigation来进行切换选项的提供，如下图：</p>
-
-<p><img src="http://developer.android.com/images/ui/actionbar-dropdown@2x.png" alt="" /></p>
-
-<p>使用下拉导航有几个步骤：</p>
-
-<ol>
-<li>创建一个SpinnerAdapter，提供下拉项的布局</li>
-<li>实现一个选择接口 <code>ActionBar.OnNavigationListener</code>，处理事件</li>
-<li>在Activity的onCreate里面调用setnavigationMode()</li>
-<li>actionbar.setListNavigationCallbacks(spinneradapter,mnavigationcallback),将1和2定义的东西传进去</li>
-</ol>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Android之菜单]]></title>
-    <link href="http://chuyun923.github.io/blog/2014/12/19/androidzhi-cai-dan/"/>
-    <updated>2014-12-19T17:19:36+08:00</updated>
-    <id>http://chuyun923.github.io/blog/2014/12/19/androidzhi-cai-dan</id>
-    <content type="html"><![CDATA[<p>本文参考自官方文档：<a href="https://developer.android.com/guide/topics/ui/menus.html">https://developer.android.com/guide/topics/ui/menus.html</a></p>
-
-<p>Android为了维护app之间一个统一的操作习惯，提供了Menus来处理用户和Activity之间的一些交互。但是在不同的系统版本上面推荐的Menu不一样。比如在android 3.0以下，由于Google会要求所有设备生产商提供一个菜单的实体键，所以在3.0一下菜单的主要弹出方式就是点击菜单实体键，弹出6个条目的菜单面板。在3.0以后，引入ActionBar，打开菜单行为转变成点击ActionBar上面的overflow按钮。这两种菜单面板的操作一般都是影响到整个app的操作。</p>
-
-<!--more-->
-
-
-<p>下图是3.0一下的Option Menu的样子：<br /></p>
-
-<p><img src="https://developer.android.com/images/options_menu.png" alt="" /></p>
-
-<p>这是3.0上的ActionBar的样子：</p>
-
-<p><img src="https://developer.android.com/images/ui/actionbar.png" alt="" /></p>
-
-<p>当然除了上面提到的菜单面板，Android还提供了上下文菜单(Context menu)和弹出菜单(Popup Menu)。尽管存在三种不同的菜单，但是Android提供了一个统一操作的API。</p>
-
-<h2>在XML中定义菜单项</h2>
-
-<p>Menu文件定义的位置在 res/menu目录下，而且顶层元素必须是Menu。在Menu中可以放置item和group，其中group又可以包含多个item。在group中的所有item都会共享某一些熟悉，主要是用来对group进行分类管理,比如设置某一类菜单项的可见。</p>
-
-<p>多级菜单可以通过在item中嵌入Menu来现实。</p>
-
-<h3>选项菜单</h3>
-
-<p>前面已经说到，选项菜单在3.0前后版本存在一些差别。在Fragment和Activity中都可以创建选项菜单,系统会首先显示Activity中创建的item，然后按照fragment加入的顺序添加item。<strong>在3.0一下时，onCreateOptionsMenu是在点击菜单键时触发；在3.0以上，则是在Activity创建时就会调用。</strong></p>
-
-<p>响应点击事件，可以在onOptionsItemSelected中进行。注意这个事件处理函数需要返回一个boolean值。如果已经处理了这次点击需要返回true，否则直接调用super.onOptionsItemSelected()(返回fasle)。这个事件的处理流程是，事件先被送到Activity，然后按照先进先达的顺序，直至莫一个fragement处理了这次点击或者所有的fragment都已经遍历了。</p>
-
-<p>可以在菜单的item中指定<code>android:onClick</code>，这个点击事件的处理函数必须是Activity中签名为public 并且接受一个MenuItem的参数。</p>
-
-<p><strong>更新菜单中的选项</strong>，我们可以通过onCreateOptionsMenu来创建菜单项，但是如果想在运行时改变菜单中的选项，可以重写onPrepareOptionsMenu方法来实现。在3.0以下，这个方法会在菜单键每次按下的时候触发；在3.0以上，由于ActionBar是一直显示的，所以我们如果需要改变菜单，可以主动调用<code>invalidateOptionsMenu()</code>,然后系统会去走onPrepareOptionsMenu。</p>
-
-<h3>上下文菜单</h3>
-
-<p>Contextual Menu主要多用于和界面特别是AdapterView中的某一个item进行交互,通过长按控件来呼出一个Action Menu。如果说Option menu(Actionbar)上面的菜单选项是针对整个app的范围，那么Contextual Menu从名字就可以看出来是针对当前context范围内的操作。存在两种方式：</p>
-
-<ul>
-<li>floating context menu，通常在长按ListView中的某一项之后出现。</li>
-<li>Contextual action mode，会显示出一个ActionBar，它是一种ActionMode的实现，在3.0系统以上才能使用。</li>
-</ul>
-
-
-<p>下图左边是floating context Menu，右边是Contextual action mode</p>
-
-<p><img src="https://developer.android.com/images/ui/menu-context.png" alt="" /></p>
-
-<h4>floating context menu</h4>
-
-<p>floating context menu是3.0一下版本建议使用的，针对当前Context的一个操作面板，通过长按指定控件呼出。<strong>长按事件如果也被监听，那么会先执行长按事件，再执行onContextItemSelected。如果长按事件处理返回true，那么context Menu不会被呼出</strong>：</p>
-
-<ol>
-<li>通过Activity或者Fragment的registerForContextMenu,传入一个View，为它注册一个floating context menu</li>
-<li>实现onCreateContextMenu，来创建Menu条目</li>
-<li>实现onContextItemSelected处理选择某一个菜单的事件</li>
-</ol>
-
-
-<p>同样需要注意的是在处理事件时，也是由Activity最先接收，然后按照加入顺序分发到每一个Fragment。</p>
-
-<h4>contextual action mode</h4>
-
-<p>从上图可以看到Contextual action和ActionBar颇有几分相似，但是两者直接并无直接关联。在3.0一下版本中，我们需要使用support包中的兼容方案。
-单个View使用步骤如下：</p>
-
-<ol>
-<li>实现ActionMode.CallBack，这里主要实现action mode的主要逻辑</li>
-<li>在合适的时候通过Activity或者fragment的startSupportActionMode来进入一个contextaul action mode。</li>
-</ol>
-
-
-<p>在AdapterView中使用，步骤如下：</p>
-
-<ol>
-<li>实现AbsListView.MultiChoiceModeListener，其实这个玩意继承自ActionMode.CallBack，增加了onItemCheckedStateChanged函数，用来处理当AbsListView中某一项的选择状态改变时的操作。</li>
-<li>通过设置AbsListView的MultiChoiceModeListener，注意，这里默认进入Action Mode的动作是长按某一个Item。</li>
-</ol>
-
-
-<h3>Popup Menu</h3>
-
-<p>API level 11加入。在android中还提供了一种用来相对于界面上已经存在的一个控件的菜单，比如类似于ActionBar上面的overflow。</p>
-
-<p><img src="https://developer.android.com/images/ui/popupmenu.png" alt="" /></p>
-
-<p>使用Popup Menu的步骤如下：</p>
-
-<ol>
-<li>通过context和相对的View创建PopupMenu对象。</li>
-<li>通过popupMenu对象来设置Menu的布局和监听事件函数。</li>
-</ol>
-
-
-<p><strong>需要注意的是PopupMenu弹出的位置是自适应的，主要看这个View在那个地方有空间，就会在哪个方向上面弹出来。</strong></p>
-
-<h3>选择菜单项</h3>
-
-<p>选择菜单和前面所提及的菜单类型不同，它仅仅是一种菜单项的表现形式。在本文之前提及的所有菜单中，每一个菜单项的呈现方式都是简单的文字(或者icon),如果我们要加入一种单选框或者复选框的效果，可以使用item的checkable属性。效果如下图：</p>
-
-<p><img src="https://developer.android.com/images/radio_buttons.png" alt="" /></p>
-
-<p>需要注意的是，在option Menu中，如果一个菜单项是以icon的方式显示出来，那么它将不会显示选择框。</p>
-
-<p>我们亦可以通过group来为一组item设置选择条件，这才是它本来的意义。<code>android:checkableBehavior</code>可以设置成radio 或者checkbox或者none，默认应该是checkbox。
-<strong>选择菜单项是不能保存状态的，如果app退出，下次再进入状态就不存在了。</strong></p>
-
-<h3>意图菜单项</h3>
-
-<p>如果我们需要在菜单项中通过Intent启动另外一个Activity，Menu提供了专门的类型来处理，这就是Intent Options。而且意图菜单项还可以在系统中解析这个Intent是否能够被Activity了解，如果系统中没有Activity能够接受这个Intent，那么这个意图菜单项将不会展示出来。使用步骤如下：</p>
-
-<ol>
-<li>在定义的Intent中增加一个category：<code>CATEGORY_ALTERNATIVE and/or CATEGORY_SELECTED_ALTERNATIVE</code></li>
-<li>调用Menu.addIntentOpions()。</li>
-</ol>
-
-
-<p>addIntentOptions方法返回增加的item数目，所以通过Intent解析的item都会被加入菜单中。<strong>这个菜单项的item title就是intent-filter的android:label,icon是application icon</strong></p>
-
-<p>感觉这个东东和settings等系统模块一样，在中国开发者的眼中根本不会去用它，所以老外才会感叹中国做的app怎么这么难用，每个应用的风格都不一样。。。</p>
 ]]></content>
   </entry>
   
