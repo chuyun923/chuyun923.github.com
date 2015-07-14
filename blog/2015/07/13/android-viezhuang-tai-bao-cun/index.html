@@ -92,18 +92,21 @@
 
 <p>我们知道<code>FragmentTabHost</code>内部对于<code>Fragment</code>的切换使用的是<code>attach</code>和dettach，此时必然会走Fragment的视图树的重建，也就是在切换tab的时候，fragment的UI元素会进行重建，当然也包括重建其中的ListView。那为什么在重建之后Listview能找到正确位置？为了找到解释，我开始查阅代码。</p>
 
-<p>第一个想法是否是我们通过Fragment的onSaveInstanceState和Bundle来保存的呢？但是看Fragment中的方法并没有任何代码进行保存，也没有进行恢复。</p>
+<!--more-->
 
-<p>有人告诉我是通过Adapter来进行保存的，因为我们的Fragment会持有listview使用的ListAdapter，所以在重建的时候listadapter实际上复用之前的adapter，但是，通查adapter的代码，发现并没有任何保存当前位置的代码。</p>
+
+<p>第一个想法是否是我们通过<code>Fragment</code>的<code>onSaveInstanceState</code>和<code>Bundle</code>来保存的呢？但是看<code>Fragment</code>中的方法并没有任何代码进行保存，也没有进行恢复。</p>
+
+<p>有人告诉我是通过<code>Adapter</code>来进行保存的，因为我们的<code>Fragment</code>会持有<code>listview</code>使用的<code>ListAdapter</code>，所以在重建的时候<code>listadapter</code>实际上复用之前的<code>adapter</code>，但是，通查adapter的代码，发现并没有任何保存当前位置的代码。</p>
 
 <p>这样不科学的事情怎么会发生？一个新创建出来的ListView居然会保存之前一个ListView的状态？</p>
 
 <h2>Android View状态保存</h2>
 
-<p>我们经常有这样的经验，在一个EditText中我们输入一些文字，在屏幕翻转时，EditText进行重建，其中的文字还会保留(前提是你为这个EditText指定了ID)。
-解释这个问题，我们需要从Android的View状态保存机制说起。</p>
+<p>我们经常有这样的经验，在一个<code>EditText</code>中我们输入一些文字，在屏幕翻转时，<code>EditText</code>进行重建，其中的文字还会保留(前提是你为这个<code>EditText</code>指定了ID)。
+解释这个问题，我们需要从<code>Android</code>的<code>View</code>状态保存机制说起。</p>
 
-<p>在View中Android定义了<code>saveHierarchyState</code>，它用来保存这个View所在的视图树的状态，传进来的参数是父view保存的状态，看到这里，你应该已经意识到了这又是android View中常用的递归伎俩。</p>
+<p>在<code>View</code>中<code>Android</code>定义了<code>saveHierarchyState</code>，它用来保存这个<code>View</code>所在的视图树的状态，传进来的参数是父<code>view</code>保存的状态，看到这里，你应该已经意识到了这又是<code>android View</code>中常用的递归伎俩。</p>
 
 <pre><code>    public void saveHierarchyState(SparseArray&lt;Parcelable&gt; container) {
         dispatchSaveInstanceState(container);
@@ -130,7 +133,7 @@
 }
 </code></pre>
 
-<p>从上面的代码，我们可以大致想象一下saveHierarchySate的过程，顶层的view调用saveHierarchyState,然后dispatchSaveInstanceState保存自己，为了让递归走下去，我们都能想象到在ViewGroup中的dispatchSaveInstanceState会调用子View的saveHierachySate，是不是这样呢，搂一眼ViewGroup中的代码：</p>
+<p>从上面的代码，我们可以大致想象一下<code>saveHierarchySate</code>的过程，顶层的<code>view</code>调用<code>saveHierarchyState</code>,然后<code>dispatchSaveInstanceState</code>保存自己，为了让递归走下去，我们都能想象到在<code>ViewGroup</code>中的<code>dispatchSaveInstanceState</code>会调用子<code>View</code>的<code>saveHierachySate</code>，是不是这样呢，搂一眼<code>ViewGroup</code>中的代码：</p>
 
 <pre><code>@Override
 protected void dispatchSaveInstanceState(SparseArray&lt;Parcelable&gt; container) {
@@ -148,12 +151,12 @@ protected void dispatchSaveInstanceState(SparseArray&lt;Parcelable&gt; container
 }
 </code></pre>
 
-<p>看到这里，相信你已经迫不及待想要看顶层View是在什么时机保存视图树信息的，Activity中的<code>onSaveInstanceState</code>有如下语句：</p>
+<p>看到这里，相信你已经迫不及待想要看顶层<code>View</code>是在什么时机保存视图树信息的，Activity中的<code>onSaveInstanceState</code>有如下语句：</p>
 
 <pre><code>outState.putBundle(WINDOW_HIERARCHY_TAG, mWindow.saveHierarchyState());
 </code></pre>
 
-<p>这里调用了跟到PhoneWindow.saveHierarchyState(),</p>
+<p>这里调用了跟到<code>PhoneWindow.saveHierarchyState()</code>,</p>
 
 <pre><code>SparseArray&lt;Parcelable&gt; states = new SparseArray&lt;Parcelable&gt;();
 mContentParent.saveHierarchyState(states);
@@ -161,13 +164,13 @@ mContentParent.saveHierarchyState(states);
 
 <p>这里交代地很清楚明白。ok，总结一下这个流程</p>
 
-<p>Acitvity在状态需要保存时，直接new了一个SparseArray，建立movieId和Parcelable的映射，其中每一个View都会使用一个Parcelable来序列化需要保存的内容，ViewGroup在保存了自己的同时，也会去调用子类的保存状态的方法，并把上面传下来的SparseArray一直往下传。</p>
+<p><code>Acitvity</code>在状态需要保存时，直接new了一个<code>SparseArray</code>，建立m<code>ovieId</code>和<code>Parcelable</code>的映射，其中每一个<code>View</code>都会使用一个<code>Parcelable</code>来序列化需要保存的内容，<code>ViewGroup</code>在保存了自己的同时，也会去调用子类的保存状态的方法，并把上面传下来的<code>SparseArray</code>一直往下传。</p>
 
 <h2>视图树状态恢复</h2>
 
-<p><strong>视图树保存下来的SparsesArray不是被ViewGroup自己持有(避免View被重新new出来，这些信息丢失，这也是前面疑惑的根源)。</strong>以Activity为例，我们可以看到整个视图树状态保存之后会放到一个Bundle中，那我们来看看视图树是如何恢复的。</p>
+<p><strong>视图树保存下来的SparsesArray不是被ViewGroup自己持有(避免View被重新new出来，这些信息丢失，这也是前面疑惑的根源)。</strong>以<code>Activity</code>为例，我们可以看到整个视图树状态保存之后会放到一个<code>Bundle</code>中，那我们来看看视图树是如何恢复的。</p>
 
-<p>在Activity的<code>onRestoreInstanceState</code>中</p>
+<p>在<code>Activity</code>的<code>onRestoreInstanceState</code>中</p>
 
 <pre><code>    protected void onRestoreInstanceState(Bundle savedInstanceState) {
         if (mWindow != null) {
@@ -179,7 +182,7 @@ mContentParent.saveHierarchyState(states);
     }
 </code></pre>
 
-<p>跟到PhoneWindow中的<code>restoreHierarchyState</code></p>
+<p>跟到<code>PhoneWindow</code>中的<code>restoreHierarchyState</code></p>
 
 <pre><code>    SparseArray&lt;Parcelable&gt; savedStates = savedInstanceState.getSparseParcelableArray(VIEWS_TAG);
     if (savedStates != null) {
@@ -187,7 +190,7 @@ mContentParent.saveHierarchyState(states);
     }
 </code></pre>
 
-<p>从Bundle中拿出之前保存的SparseArray，丢给顶层View的restoreHierarchyState</p>
+<p>从Bundle中拿出之前保存的SparseArray，丢给顶层View的<code>restoreHierarchyState</code></p>
 
 <pre><code>    public void restoreHierarchyState(SparseArray&lt;Parcelable&gt; container) {
     dispatchRestoreInstanceState(container);
@@ -219,7 +222,7 @@ mContentParent.saveHierarchyState(states);
 
 <p>虽然<code>attach</code>和<code>dettach</code>并不会引起Activity的状态保存，但是由于视图树保存状态的机制可以知道，Fragment也可以只保留自己所持有的View，然后恢复Fragment的视图树。</p>
 
-<p>在FragmentManager的<code>moveToState</code>方法中，调用了<code>saveFragmentViewState</code></p>
+<p>在<code>FragmentManager</code>的<code>moveToState</code>方法中，调用了<code>saveFragmentViewState</code></p>
 
 <pre><code>void saveFragmentViewState(Fragment f) {
     if (f.mView == null) {
