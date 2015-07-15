@@ -12,6 +12,7 @@ categories: Android
 	java.lang.NullPointerException: Attempt to invoke virtual method 'void android.support.v7.widget.RecyclerView$LayoutManager.stopSmoothScroller()' on a null object reference
 	
 查看堆栈，是在Activity的Destory方法一路调用到`RecyclerView`的`onDetachedFromWindow`里面报的NPE。
+<!-- more-->
 
 ##原因
 
