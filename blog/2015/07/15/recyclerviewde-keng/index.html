@@ -7,6 +7,9 @@
 
 <p>查看堆栈，是在Activity的Destory方法一路调用到<code>RecyclerView</code>的<code>onDetachedFromWindow</code>里面报的NPE。</p>
 
+<!-- more-->
+
+
 <h2>原因</h2>
 
 <p>Activity在销毁时，回去调用View中的<code>onDetachedFromWindow</code>,搂一眼代码：</p>

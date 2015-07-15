@@ -4,7 +4,7 @@
   <title><![CDATA[楚云之南]]></title>
   <link href="http://chuyun923.github.io/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2015-07-15T17:07:34+08:00</updated>
+  <updated>2015-07-15T17:12:38+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -26,6 +26,9 @@
 </code></pre>
 
 <p>查看堆栈，是在Activity的Destory方法一路调用到<code>RecyclerView</code>的<code>onDetachedFromWindow</code>里面报的NPE。</p>
+
+<!-- more-->
+
 
 <h2>原因</h2>
 
