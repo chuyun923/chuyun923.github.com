@@ -4,7 +4,7 @@
   <title><![CDATA[楚云之南]]></title>
   <link href="http://chuyun923.github.io/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2015-07-14T14:46:05+08:00</updated>
+  <updated>2015-07-15T17:07:34+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -12,6 +12,77 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Recyclerviewde Keng]]></title>
+    <link href="http://chuyun923.github.io/blog/2015/07/15/recyclerviewde-keng/"/>
+    <updated>2015-07-15T00:00:00+08:00</updated>
+    <id>http://chuyun923.github.io/blog/2015/07/15/recyclerviewde-keng</id>
+    <content type="html"><![CDATA[<h2>问题描述</h2>
+
+<p>使用<code>RecyclerView</code>版本时，报如下异常：</p>
+
+<pre><code>java.lang.NullPointerException: Attempt to invoke virtual method 'void android.support.v7.widget.RecyclerView$LayoutManager.stopSmoothScroller()' on a null object reference
+</code></pre>
+
+<p>查看堆栈，是在Activity的Destory方法一路调用到<code>RecyclerView</code>的<code>onDetachedFromWindow</code>里面报的NPE。</p>
+
+<h2>原因</h2>
+
+<p>Activity在销毁时，回去调用View中的<code>onDetachedFromWindow</code>,搂一眼代码：</p>
+
+<pre><code> @Override
+protected void onDetachedFromWindow() {
+    super.onDetachedFromWindow();
+    if (mItemAnimator != null) {
+        mItemAnimator.endAnimations();
+    }
+    mFirstLayoutComplete = false;
+
+    stopScroll();
+    mIsAttached = false;
+    if (mLayout != null) {
+        mLayout.onDetachedFromWindow(this, mRecycler);
+    }
+    removeCallbacks(mItemAnimatorRunner);
+}
+
+ public void stopScroll() {
+    setScrollState(SCROLL_STATE_IDLE);
+    stopScrollersInternal();
+}
+
+/**
+ * Similar to {@link #stopScroll()} but does not set the state.
+ */
+private void stopScrollersInternal() {
+    mViewFlinger.stop();
+    //什么！！！！
+    mLayout.stopSmoothScroller();
+}
+</code></pre>
+
+<p><code>stopScrollersInternal</code>中没有判空。</p>
+
+<h2>其他问题</h2>
+
+<p>其实这个问题还有另外一个版本，如果在XML中定义了一个<code>RecyclerView</code>,而不调用<code>setLayoutManager</code>,会直接crash，NPE报得飞起。大概是在<code>OnMeasure</code>里面直接调用了<code>LayoutManager</code> 的方法导致的，问题也是同一个，木有判空。
+人与人之间基本的信任呢？我在xml里面定义一个view，不在代码里面执行指定操作就crash，略屌。。。</p>
+
+<h2>解决方案</h2>
+
+<p><a href="http://stackoverflow.com/questions/26702633/why-am-i-getting-a-null-reference-on-my-recyclerview/26908738#26908738">stackoverflow</a>
+让我们继承RecyclerView，然后重写方法。</p>
+
+<p>不过我发现在最新的support包里面，也就是RecyclerView的5.1.0_r1版本已经修复了这个问题,google大法好！</p>
+
+<p>对于上面提到第二个问题，如果在<code>onMeasure</code>的时候<code>LayoutManager</code>为空，那么<code>RecyclerView</code>会给一个默认值。</p>
+
+<p>所以你需要做的仅仅是升级到最新版本即可。</p>
+
+<p><code>compile 'com.android.support:recyclerview-v7:22.2.0'</code></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Android 视图树状态保存]]></title>
