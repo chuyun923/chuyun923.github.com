@@ -4,7 +4,7 @@
   <title><![CDATA[楚云之南]]></title>
   <link href="http://chuyun923.github.io/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2015-07-31T16:11:34+08:00</updated>
+  <updated>2015-07-31T16:17:12+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -18,9 +18,7 @@
     <link href="http://chuyun923.github.io/blog/2015/07/28/viewshi-jian-zhi-fu-viewhe-zi-viewzhi-jian-de-na-dian-shi/"/>
     <updated>2015-07-28T09:29:14+08:00</updated>
     <id>http://chuyun923.github.io/blog/2015/07/28/viewshi-jian-zhi-fu-viewhe-zi-viewzhi-jian-de-na-dian-shi</id>
-    <content type="html"><![CDATA[<h1>View事件传递之父View和子View之间的那点事</h1>
-
-<p><code>Android</code>事件传递流程在网上可以找到很多资料，<code>FrameWork</code>层输入事件和消费事件，可以参考：</p>
+    <content type="html"><![CDATA[<p><code>Android</code>事件传递流程在网上可以找到很多资料，<code>FrameWork</code>层输入事件和消费事件，可以参考：</p>
 
 <ol>
 <li><a href="http://blog.csdn.net/stonecao/article/details/6759189">Touch事件派发过程详解</a></li>
