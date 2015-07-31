@@ -4,7 +4,7 @@
   <title><![CDATA[楚云之南]]></title>
   <link href="http://chuyun923.github.io/atom.xml" rel="self"/>
   <link href="http://chuyun923.github.io/"/>
-  <updated>2015-07-31T15:52:12+08:00</updated>
+  <updated>2015-07-31T16:11:34+08:00</updated>
   <id>http://chuyun923.github.io/</id>
   <author>
     <name><![CDATA[楚云]]></name>
@@ -27,7 +27,7 @@
 </ol>
 
 
-<p>这篇blog阐述了底层是如何处理屏幕输，并往上传递的。Touch事件传递到Activity的<code>DecorView</code>时，往下走就是<code>ViewGroup</code>和子<code>View</code>之间的事件传递，可以参考郭神的这两篇博客</p>
+<p>这篇blog阐述了底层是如何处理屏幕输，并往上传递的。<code>Touch</code>事件传递到<code>Activity</code>的<code>DecorView</code>时，往下走就是<code>ViewGroup</code>和子<code>View</code>之间的事件传递，可以参考郭神的这两篇博客</p>
 
 <ol>
 <li><a href="http://blog.csdn.net/guolin_blog/article/details/9097463">Android事件分发机制完全解析，带你从源码的角度彻底理解(上)</a></li>
@@ -35,29 +35,32 @@
 </ol>
 
 
-<p>郭神的两篇博客清楚明白地说明了View之间事件传递的大方向，但是具体的一些晦暗的细节阐述较少，本文主要是总结这两篇博客的同时，侧重于两点：</p>
+<p>郭神的两篇博客清楚明白地说明了<code>View</code>之间事件传递的大方向，但是具体的一些晦暗的细节阐述较少，本文主要是总结这两篇博客的同时，侧重于两点：</p>
 
 <ol>
 <li>事件分发过程中一些细节到底如何实现的？</li>
-<li>子view到底如何和父View抢事件，父View又是如何拦截事件不发送给子View，以及如果我们需要处理这种混乱的关系才能让两者和谐相处？。</li>
+<li>子<code>view</code>到底如何和父<code>View</code>抢事件，父<code>View</code>又是如何拦截事件不发送给子<code>View</code>，以及如果我们需要处理这种混乱的关系才能让两者和谐相处？。</li>
 </ol>
+
+
+<!--more-->
 
 
 <h2>MotionEvent抽象</h2>
 
-<p>要明白View的事件传递，很有必要先说一下Touch事件是如何在Android系统中抽象的，这主要使用的就是MotionEvent。这个类经历了几次重大的修改，一次是在2.x版本支持多点触摸，一次是4.x将大部分代码甩给native层处理。</p>
+<p>要明白<code>View</code>的事件传递，很有必要先说一下<code>Touch</code>事件是如何在<code>Android</code>系统中抽象的，这主要使用的就是<code>MotionEvent</code>。这个类经历了几次重大的修改，一次是在2.x版本支持多点触摸，一次是4.x将大部分代码甩给<code>native</code>层处理。</p>
 
 <h3>一次简单的事件</h3>
 
-<p>我们先举个栗子来说明一次完整的事件，用户触屏 滑动 到手机离开屏幕，这认为是一次完整动作序列(<code>movement traces</code>)。一个动作序列中包含很多动作<code>Action</code>，比如在用户按下时，会封装一个MotionEvent，分发给视图树，我们可以通过<code>motionevent.getAction</code>拿到这个动作是<code>ACTION_DOWN</code>。同样，在手指抬起时，我们可以接收到Action类型是<code>Action_UP</code>的MotionEvent。对于滑动(MOVE)这个操作，Android为了从效率出发，会将多个MOVE动作打包到一个MotionEvent中。通过getX getY可以获取当前的坐标，如果要访问打包的缓存数据，可以通过getHistorical**()函数来获取。</p>
+<p>我们先举个栗子来说明一次完整的事件，用户触屏 滑动 到手机离开屏幕，这认为是一次完整动作序列(<code>movement traces</code>)。一个动作序列中包含很多动作<code>Action</code>，比如在用户按下时，会封装一个<code>MotionEvent</code>，分发给视图树，我们可以通过<code>motionevent.getAction</code>拿到这个动作是<code>ACTION_DOWN</code>。同样，在手指抬起时，我们可以接收到<code>Action</code>类型是<code>Action_UP</code>的<code>MotionEvent</code>。对于滑动(<code>MOVE</code>)这个操作，<code>Android</code>为了从效率出发，会将多个<code>MOVE</code>动作打包到一个<code>MotionEvent</code>中。通过<code>getX getY</code>可以获取当前的坐标，如果要访问打包的缓存数据，可以通过<code>getHistorical**()</code>函数来获取。</p>
 
 <h3>加入多点触摸</h3>
 
-<p>对于单点的操作来看，MotionEvent显得比较简单，但是考虑引入多点触摸呢？我们定义一个接触点为(Pointer)。我们从onTouch接受到一个MotionEvent，怎么拿到多个触碰点的信息？为了解开笔者刚开始学习这部分知识时的困惑，我们首先树立起一种概念：一个MotionEvent只允许有一个Action(动作)，而且这个Action会包含触发这次Action的触碰点信息，对于MOVE操作来说，一定是当前所有触碰点都在动。只有<code>ACTION_POINTER_DOWN</code>这类事件事件会在Action里面指定是哪一个POINTER按下。</p>
+<p>对于单点的操作来看，<code>MotionEvent</code>显得比较简单，但是考虑引入多点触摸呢？我们定义一个接触点为(<code>Pointer</code>)。我们从<code>onTouch</code>接受到一个<code>MotionEvent</code>，怎么拿到多个触碰点的信息？为了解开笔者刚开始学习这部分知识时的困惑，我们首先树立起一种概念：一个<code>MotionEvent</code>只允许有一个<code>Action</code>(动作)，而且这个<code>Action</code>会包含触发这次<code>Action</code>的触碰点信息，对于<code>MOVE</code>操作来说，一定是当前所有触碰点都在动。只有<code>ACTION_POINTER_DOWN</code>这类事件事件会在<code>Action</code>里面指定是哪一个<code>POINTER</code>按下。</p>
 
-<p>在MotionEvent的底层实现中，是通过一个16位来存储Action和Pointer信息【PointerIndex】。低8位表示Action，理论上可以表示255种动作类型;高8位表示触发这个Action的PointerIndex，理论上Android最多可以支持255点同时触摸，但是在上层代码使用的时候，默认多点最多存在32个，不然事件在分发的时候会有问题。</p>
+<p>在<code>MotionEvent</code>的底层实现中，是通过一个16位来存储<code>Action</code>和<code>Pointer</code>信息(<code>PointerIndex</code>)。低8位表示<code>Action</code>，理论上可以表示255种动作类型;高8位表示触发这个<code>Action</code>的<code>PointerIndex</code>，理论上<code>Android</code>最多可以支持255点同时触摸，但是在上层代码使用的时候，默认多点最多存在32个，不然事件在分发的时候会有问题。</p>
 
-<p>MotionEvent中多个手指的操作API大部分都是通过pointerindex来进行的，如：获取不同Pointer的触碰位置,getX(int pointerIndex);获取PointerId等等。大部分情况下，pointerid == pointeridex。</p>
+<p><code>MotionEvent</code>中多个手指的操作<code>API</code>大部分都是通过<code>pointerindex</code>来进行的，如：获取不同<code>Pointer</code>的触碰位置,<code>getX(int pointerIndex)</code>;获取<code>PointerId</code>等等。大部分情况下，<code>pointerid == pointeridex</code>。</p>
 
 <p><code>ACTION_DOWN</code> OR <code>ACTION_POINTER_DOWN</code>:</p>
 
@@ -70,11 +73,11 @@
 
 <h2>View的事件传递</h2>
 
-<p>Android的Touch事件传递到Activity顶层的DecorView(一个FrameLayout)之后，会通过ViewGroup一层层往视图树的上面传递，最终将事件传递给实际接收的View。下面给出一些重要的方法。如果你对这个流程比较熟悉的话，可以跳过这里，直接进入第二部分。</p>
+<p><code>Android</code>的<code>Touch</code>事件传递到<code>Activity</code>顶层的<code>DecorView</code>(一个<code>FrameLayout</code>)之后，会通过<code>ViewGroup</code>一层层往视图树的上面传递，最终将事件传递给实际接收的<code>View</code>。下面给出一些重要的方法。如果你对这个流程比较熟悉的话，可以跳过这里，直接进入第二部分。</p>
 
 <h3>dispatchTouchEvent</h3>
 
-<p>事件传递到一个ViewGroup上面时，会调用dispatchTouchEvent。代码有删减</p>
+<p>事件传递到一个<code>ViewGroup</code>上面时，会调用<code>dispatchTouchEvent</code>。代码有删减</p>
 
 <pre><code>public boolean dispatchTouchEvent(MotionEvent ev) {
 
@@ -153,6 +156,22 @@
                         }                           }
                         //Attention 3 : 直接发给子View
                         if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
+                            // Child wants to receive touch within its bounds.
+                            mLastTouchDownTime = ev.getDownTime();
+                            if (preorderedList != null) {
+                                // childIndex points into presorted list, find original index
+                                for (int j = 0; j &lt; childrenCount; j++) {
+                                    if (children[childIndex] == mChildren[j]) {
+                                        mLastTouchDownIndex = j;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                mLastTouchDownIndex = childIndex;
+                            }
+                            mLastTouchDownX = ev.getX();
+                            mLastTouchDownY = ev.getY();
+                            newTouchTarget = addTouchTarget(child, idBitsToAssign);
                             alreadyDispatchedToNewTouchTarget = true;
                             break;
                         }
@@ -183,11 +202,13 @@
 }
 </code></pre>
 
-<p>上面代码中的Attention在后面部分将会涉及，重点注意。</p>
+<p>上面代码中的<strong><em><code>Attention</code></em></strong>在后面部分将会涉及，重点注意。</p>
 
-<p>这里需要指出一点的是，一系列动作中的不同Pointer可以分配给不同的View去响应。ViewGroup会维护一个PointerId和处理View的列表TouchTarget，一个TouchTarget代表一个可以处理Touch中Pointer的子View，当然一个View可以处理多个Pointer，比如两根手指都在某一个子View区域。TouchTarget内部使用一个int来存储它能处理的PointerId，一个int 32位，这也就是上层为啥最多只能允许同时最多32点触碰。</p>
+<p>这里需要指出一点的是，一系列动作中的不同<code>Pointer</code>可以分配给不同的<code>View</code>去响应。ViewGroup会维护一个<code>PointerId</code>和处理<code>View</code>的列表<code>TouchTarget</code>，一个<code>TouchTarget</code>代表一个可以处理<code>Pointer</code>的子<code>View</code>，当然一个<code>View</code>可以处理多个<code>Pointer</code>，比如两根手指都在某一个子<code>View</code>区域。<code>TouchTarget</code>内部使用一个<code>int</code>来存储它能处理的<code>PointerId</code>，一个<code>int</code>32位，这也就是上层为啥最多只能允许同时最多32点触碰。</p>
 
-<p>这里可以看到，ViewGroup真正处理事件是在dispatchTransformedTouchEvent里面，跟进去看看：</p>
+<p>看一下<code>Attention 3</code> 处的代码，我们经常说<code>view</code>的<code>dispatchTouchEvent</code>如果返回false，那么它就不能系列动作后面的动作，这是为啥呢？因为<code>Attention 3</code>处如果返回<code>false</code>，那么它不会被记录到<code>TouchTarget</code>中，ViewGroup认为你没有能力处理这个事件。</p>
+
+<p>这里可以看到，<code>ViewGroup</code>真正处理事件是在<code>dispatchTransformedTouchEvent</code>里面，跟进去看看：</p>
 
 <h3>dispatchTransformedTouchEvent</h3>
 
@@ -211,7 +232,7 @@
 }
 </code></pre>
 
-<p>可以看到这里不管怎么样，都会调用View的dispatchTouchEvent,这是真正处理这一次点击事件的地方。</p>
+<p>可以看到这里不管怎么样，都会调用<code>View</code>的<code>dispatchTouchEvent</code>,这是真正处理这一次点击事件的地方。</p>
 
 <h3>dispatchTouchEvent</h3>
 
@@ -233,34 +254,34 @@
     }
 </code></pre>
 
-<p>我们给View设置的onTouch事件处在一个较高的优先级，如果onTouch执行返回true，那么就不会去走view的onTouchEvent，而我们一些点击事件都是在onTouchEvent中处理的，这也是为什么onTouch中返回true，view的点击相关事件不会被处理。</p>
+<p>我们给<code>View</code>设置的<code>onTouch</code>事件处在一个较高的优先级，如果<code>onTouch</code>执行返回<code>true</code>，那么就不会去走<code>view</code>的<code>onTouchEvent</code>，而我们一些点击事件都是在<code>onTouchEvent</code>中处理的，这也是为什么<code>onTouch</code>中返回true，<code>view</code>的点击相关事件不会被处理。</p>
 
 <h3>小小总结一下这个流程</h3>
 
-<p>ViewGroup在接受到上级传下来的事件时，如果是一系列Touch事件的开始(ACTION_DOWN)，ViewGroup会先看看自己需不需要拦截这个事件(onInterceptTouchEvent，ViewGroup的默认实现直接返回false表示不拦截)，接着ViewGroup遍历自己所有的View。找到当前点击的那个View，马上调用目标View的dispatchTouchEvent。如果目标View的dispatchTouchEvent返回false，那么认为目标View只是在那个位置而已，它并不想接受这个事件，只想安安静静的做一个View(我静静地看着你们装*)。此时，ViewGroup还会去走一下自己dispatchTouchEvent，Done！</p>
+<p><code>ViewGroup</code>在接受到上级传下来的事件时，如果是一系列<code>Touch</code>事件的开始(<code>ACTION_DOWN</code>)，<code>ViewGroup</code>会先看看自己需不需要拦截这个事件(<code>onInterceptTouchEvent</code>，<code>ViewGroup</code>的默认实现直接返回<code>false</code>表示不拦截)，接着<code>ViewGroup</code>遍历自己所有的<code>View</code>。找到当前点击的那个<code>View</code>，马上调用目标<code>View</code>的<code>dispatchTouchEvent</code>。如果目标<code>View</code>的<code>dispatchTouchEvent</code>返回false，那么认为目标<code>View</code>只是在那个位置而已，它并不想接受这个事件，只想安安静静的做一个<code>View</code>(我静静地看着你们装*)。此时，<code>ViewGroup</code>还会去走一下自己<code>dispatchTouchEvent，Done！</code></p>
 
 <h2>子View和父View的撕*大战</h2>
 
-<p>终于来到本文的重要环节，子View和父布局(ViewGroup)是如何撕逼的。我们经常遇到这样的问题：在ListView中放一个ViewPager不能滑动的问题，其实这里就会涉及到子View和布局之间的协商，到底你上还是我上。</p>
+<p>终于来到本文的重要环节，子View和父布局(<code>ViewGroup</code>)是如何撕逼的。我们经常遇到这样的问题：在<code>ListView</code>中放一个<code>ViewPager</code>不能滑动的问题，其实这里就会涉及到子View和布局之间的协商，事件处理到底你上还是我上。</p>
 
-<p>首先需要明确一点的是，一个事件肯定是由ViewGroup传递给自己的子View的，所以ViewGroup具有绝对的权威来禁止事件往下传，这就是onInterceptTouchEvent方法。可以看上面ViewGroup中的dispatchTouchEvent的Attention 1 和 Attention 2。</p>
+<p>首先需要明确一点的是，一个事件肯定是由<code>ViewGroup</code>传递给自己的子<code>View</code>的，所以<code>ViewGroup</code>具有绝对的权威来禁止事件往下传，这就是<code>onInterceptTouchEvent</code>方法。可以看上面<code>ViewGroup中的dispatchTouchEvent</code>的<code>Attention 1</code>和<code>Attention 2</code>。</p>
 
-<p>先看Attetion2：
+<p>先看<code>Attetion2</code>：
 进行判断有有两个条件：1，如果是一次新的事件 or  在一次事件中但是已经有子View来处理这个事件，那么父类需要去看看是否拦截这次事件。否则，直接拦截(此时处于一系列动作的中间，而且没有子view来接盘，那么ViewGroup就直接拦下来)。</p>
 
 <p>决定是否拦截有两个步骤，</p>
 
 <ol>
-<li>disallowIntercept 是否驳回拦截，默认false。注意这个值是子View和撕*的关键，因为ViewGroup开放了给这个标记赋值的接口requestDisallowInterceptTouchEvent()，而且这个方法直接往上递归，这个ViewGroup的各级父容器都会设置驳回拦截。</li>
-<li>onInterceptTouchEvent 虽然ViewGroup中默认返回false，但是在很多有滑动功能的ViewGroup里面(如scrollview ListView等)会处理各种情况，决定是否拦截这个事件，所以就会出现之前说的ListView中的Viewpager不能滑动的问题，原因是事件被父View拦截了。</li>
+<li><code>disallowIntercept</code> 是否驳回拦截，默认<code>false</code>。注意这个值是子<code>View</code>和撕*的关键，因为<code>ViewGroup</code>开放了给这个标记赋值的接口<code>requestDisallowInterceptTouchEvent()</code>，而且这个方法直接往上递归，这个<code>ViewGroup</code>的各级父容器都会设置驳回拦截。</li>
+<li><code>onInterceptTouchEvent</code> 虽然<code>ViewGroup</code>中默认返回false，但是在很多有滑动功能的<code>ViewGroup</code>里面(如<code>scrollview ListView</code>等)会处理各种情况，决定是否拦截这个事件，所以就会出现之前说的<code>ListView</code>中的<code>Viewpager</code>不能滑动的问题，原因是事件被父View拦截了。</li>
 </ol>
 
 
-<p>在Attetion1的位置如果是一次新的ACTION_DOWN，那么会把之前事件传递设置的各种状态清除。</p>
+<p>在<code>Attetion1</code>的位置如果是一次新的<code>ACTION_DOWN</code>，那么会把之前事件传递设置的各种状态清除。</p>
 
 <h3>对ViewGroup来说需要做什么</h3>
 
-<p>对于一个需要拦截事件的ViewGroup，它通常都有一些特殊的操作，比如ScrollView，比如ViewPager，它重写onInterceptTouchEvent是非常关键的，这也是能和子View和谐相处的关键。举个例子，我自己定义了一个ViewGroup：</p>
+<p>对于一个需要拦截事件的<code>ViewGroup</code>，它通常都有一些特殊的操作，比如<code>ScrollView</code>，比如<code>ViewPager</code>，它重写<code>onInterceptTouchEvent</code>是非常关键的，这也是能和子<code>View</code>和谐相处的关键。举个例子，我自己定义了一个<code>ViewGroup</code>：</p>
 
 <pre><code>@Override
 public boolean onInterceptTouchEvent(MotionEvent ev) {
@@ -273,15 +294,15 @@ public boolean onInterceptTouchEvent(MotionEvent ev) {
 
 <p>这样会发生什么？</p>
 
-<p>所有位于MyViewGroup中的子View收不到任何的事件，原因可以看一下Attention2的代码，判断是否拦截是在系列动作按下时会进行判断，如果此时拦截，那么直接不会去查找相应处理的子View，所以touchtarget为空，那么接下来的动作都直接被ViewGroup笑纳。</p>
+<p>所有位于MyViewGroup中的子View收不到任何的事件，原因可以看一下<code>Attention2</code>的代码，判断是否拦截是在系列动作按下时会进行判断，如果此时拦截，那么直接不会去查找相应处理的子View，所以<code>touchtarget</code>为空，那么接下来的动作都直接被<code>ViewGroup</code>笑纳。</p>
 
-<p>所以哪怕再强势的ViewGroup，一般都是在Down的时候给子类机会去掉用<code>requestDisallowInterceptTouchEvent</code>，如设置驳回拦截，那么在ViewGroup分发事件的时候，会跳过onInterceptTouchEvent的执行。</p>
+<p>所以哪怕再强势的<code>ViewGroup</code>，一般都是在<code>Down</code>的时候给子类机会去掉用<code>requestDisallowInterceptTouchEvent</code>，如设置驳回拦截，那么在ViewGroup分发事件的时候，会跳过<code>onInterceptTouchEvent</code>的执行。</p>
 
 <h3>子View需要做什么</h3>
 
-<p>对于子View来说，在合适的时机调用requestDisallowInterceptTouchEvent即可。当然啥时候合适？对于一个View来说，那就是在dispatchTouchEvent或者onTouchEvent来调用。</p>
+<p>对于子View来说，在合适的时机调用<code>requestDisallowInterceptTouchEvent</code>即可。当然啥时候合适？对于一个<code>View</code>来说，那就是在<code>dispatchTouchEvent</code>或者<code>onTouchEvent</code>来调用。</p>
 
-<p>对于ViewGroup来说，通常我们会在onInterceptTouchEvent进行判断。比如我们经常会遇到在ListView里面套了ViewPager导致ViewPager不能滑动的问题，通常的处理方式：</p>
+<p>对于<code>ViewGroup</code>来说，通常我们会在<code>onInterceptTouchEvent</code>进行判断。比如我们经常会遇到在<code>ListView</code>里面套了<code>ViewPager</code>导致<code>ViewPager</code>不能滑动的问题，通常的处理方式：</p>
 
 <pre><code> @Override
 public boolean onInterceptTouchEvent(MotionEvent event) {
@@ -317,9 +338,9 @@ public boolean onInterceptTouchEvent(MotionEvent event) {
 
 <p>本来打算写一个短篇的，结果一个不小心，弄成了长篇大论。</p>
 
-<p>最后需要注意一点的是，所有我们上述讨论的内容都是在一层层递归中进行,而且requestDisallowInterceptTouchEvent这个函数也是递归调用的。</p>
+<p>最后需要注意一点的是，所有我们上述讨论的内容都是在一层层递归中进行,而且<code>requestDisallowInterceptTouchEvent</code>这个函数也是递归调用的。</p>
 
-<p>我们可以认为ViewGroup是一个具有绝对话语权但是从不专政的霸道总裁，它自己可以拦截处理某些事件，比如Viewpager的横滑，但是它也可以给子View足够的空间去要求这个事件给自己处理。作为一名开发者，一方面在自己定义ViewGroup时需要考虑能够给子View足够空间中断自己的拦截；一方面自己定义View时，我们需要在合适的时候跟父View索要事件。ViewPager作为容器来说，它需要拦截横滑事件，同时，自己具备了和父View争抢事件的能力，所以不管把ViewPager放到什么布局中，它都能正确处理。看看它的onInterceptTouchEvent怎么写的吧，完美的体现了这一思想。</p>
+<p>我们可以认为<code>ViewGroup</code>是一个具有绝对话语权但是从不专政的霸道总裁，它自己可以拦截处理某些事件，比如<code>Viewpager</code>的横滑，但是它也可以给子View足够的空间去要求这个事件给自己处理。作为一名开发者，一方面在自己定义<code>ViewGroup</code>时需要考虑能够给子View足够空间中断自己的拦截；一方面自己定义View时，我们需要在合适的时候跟父View索要事件。<code>ViewPager(新版)</code>作为容器来说，它需要拦截横滑事件，同时，自己具备了和父<code>View</code>争抢事件的能力，所以不管把<code>ViewPager</code>放到什么布局中，它都能正确处理。看看它的<code>onInterceptTouchEvent</code>怎么写的吧，完美的体现了这一思想。</p>
 ]]></content>
   </entry>
   
