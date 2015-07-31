@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>楚云之南</title>
+  <title>View事件传递之父View和子View之间的那点事 - 楚云之南</title>
   <meta name="author" content="楚云">
 
   
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://chuyun923.github.io">
+  <link rel="canonical" href="http://chuyun923.github.io/blog/2015/07/28/viewshi-jian-zhi-fu-viewhe-zi-viewzhi-jian-de-na-dian-shi">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="楚云之南" type="application/atom+xml">
@@ -63,15 +63,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2015/07/28/viewshi-jian-zhi-fu-viewhe-zi-viewzhi-jian-de-na-dian-shi/">View事件传递之父View和子View之间的那点事</a></h1>
+      <h1 class="entry-title">View事件传递之父View和子View之间的那点事</h1>
     
     
       <p class="meta">
@@ -87,7 +84,7 @@
   </header>
 
 
-  <div class="entry-content"><h1>View事件传递之父View和子View之间的那点事</h1>
+<div class="entry-content"><h1>View事件传递之父View和子View之间的那点事</h1>
 
 <p><code>Android</code>事件传递流程在网上可以找到很多资料，<code>FrameWork</code>层输入事件和消费事件，可以参考：</p>
 
@@ -390,338 +387,70 @@ public boolean onInterceptTouchEvent(MotionEvent event) {
 
 <p>我们可以认为ViewGroup是一个具有绝对话语权但是从不专政的霸道总裁，它自己可以拦截处理某些事件，比如Viewpager的横滑，但是它也可以给子View足够的空间去要求这个事件给自己处理。作为一名开发者，一方面在自己定义ViewGroup时需要考虑能够给子View足够空间中断自己的拦截；一方面自己定义View时，我们需要在合适的时候跟父View索要事件。ViewPager作为容器来说，它需要拦截横滑事件，同时，自己具备了和父View争抢事件的能力，所以不管把ViewPager放到什么布局中，它都能正确处理。看看它的onInterceptTouchEvent怎么写的吧，完美的体现了这一思想。</p>
 </div>
-  
-  
 
 
-    </article>
-  
-  
-    <article>
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/07/15/recyclerviewde-keng/">Recyclerviewde Keng</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2015-07-15T00:00:00+08:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>15</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>12:00 am</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h2>问题描述</h2>
-
-<p>使用<code>RecyclerView</code>版本时，报如下异常：</p>
-
-<pre><code>java.lang.NullPointerException: Attempt to invoke virtual method 'void android.support.v7.widget.RecyclerView$LayoutManager.stopSmoothScroller()' on a null object reference
-</code></pre>
-
-<p>查看堆栈，是在Activity的Destory方法一路调用到<code>RecyclerView</code>的<code>onDetachedFromWindow</code>里面报的NPE。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2015/07/15/recyclerviewde-keng/">展开全文</a>
-    </footer>
   
 
+<span class="byline author vcard">Posted by <span class="fn">楚云</span></span>
 
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/07/13/android-viezhuang-tai-bao-cun/">Android 视图树状态保存</a></h1>
-    
-    
-      <p class="meta">
-        
 
 
 
 
-<time class='entry-date' datetime='2015-07-13T18:13:40+08:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>6:13 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h1>Android 视图树状态保存</h1>
-
-<h2>FragmentTabHost引起的思考</h2>
-
-<p>公司的项目是一个标准的<code>FragmentTabHost</code>与<code>Fragment</code>构成的四TAB布局。其中三个TAB中都包含有<code>ListView</code>来展现一个列表。用户在切换TAB时，<code>ListView</code>的当前位置会自动被保存，切换回来之后会自动滚动到上次的位置。</p>
-
-<p>我们知道<code>FragmentTabHost</code>内部对于<code>Fragment</code>的切换使用的是<code>attach</code>和dettach，此时必然会走Fragment的视图树的重建，也就是在切换tab的时候，fragment的UI元素会进行重建，当然也包括重建其中的ListView。那为什么在重建之后Listview能找到正确位置？为了找到解释，我开始查阅代码。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2015/07/13/android-viezhuang-tai-bao-cun/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+<time class='entry-date' datetime='2015-07-28T09:29:14+08:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>28</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:29 am</span></time>
       
-  <header>
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/android/'>android</a>
+  
+</span>
+
+
+    </p>
     
-      <h1 class="entry-title"><a href="/blog/2015/04/16/android-provider/">Android Content Provider</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2015-04-16T10:58:35+08:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>16</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>10:58 am</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><code>ContentProvider</code>作为Android应用之间共享数据的桥梁，为共享数据提供了一个统一的访问方式(一套统一的接口)。</p>
-
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://chuyun923.github.io/blog/2015/07/28/viewshi-jian-zhi-fu-viewhe-zi-viewzhi-jian-de-na-dian-shi/" data-via="" data-counturl="http://chuyun923.github.io/blog/2015/07/28/viewshi-jian-zhi-fu-viewhe-zi-viewzhi-jian-de-na-dian-shi/" >Tweet</a>
+  
+  
+  
+  
+  <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style_32x32">
+	<a class="jiathis_button_qzone"></a>
+	<a class="jiathis_button_tsina"></a>
+	<a class="jiathis_button_tqq"></a>
+	<a class="jiathis_button_weixin"></a>
+	<a class="jiathis_button_renren"></a>
+	<a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	<a class="jiathis_counter_style"></a>
 </div>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+<!-- UY BEGIN -->
+<div id="uyan_frame"></div>
+<script type="text/javascript" src="http://v2.uyan.cc/code/uyan.js?uid=1987763"></script>
+<!-- UY END -->
   
-  
-    <footer>
-      <a rel="full-article" href="/blog/2015/04/16/android-provider/">展开全文</a>
-    </footer>
-  
+</div>
 
-
-    </article>
-  
-  
-    <article>
+    
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/04/15/">Java中日期时间API小结</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2015-04-15T17:47:06+08:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>15</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>5:47 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Java中为处理日期和时间提供了大量的API，确实有把一件简单的事情搞复杂的嫌疑，各种类：<code>Date Time Timestamp Calendar...</code>，但是如果能够看到时间处理的本质就可以轻松hold住这堆东西了。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2015/04/15/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+        <a class="basic-alignment left" href="/blog/2015/07/15/recyclerviewde-keng/" title="Previous Post: Recyclerviewde Keng">&laquo; Recyclerviewde Keng</a>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">Gson源码(二)之JsonReader和JsonWriter</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2015-01-10T14:17:21+08:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>10</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>2:17 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>前文介绍了<code>Gson</code>对于<code>Json</code>规范中的类型进行了抽象定义，本文将来介绍<code>stream</code>包中的源码，这一块是<code>Gson</code>的核心代码之一。Gson中的JsonReader和JsonWriter抄自android.util包中的两个类，只是把其中的上下文栈由ArrayList换成了数组，提高了效率。这两个类为Json序列化和反序列化提供了基本接口。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2015/01/10/gsonyuan-ma-zhi-streamchu-li/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/01/09/hashmaxiao-lu-fen-xi/">HashMa效率分析</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2015-01-09T11:00:58+08:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>9</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>11:00 am</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>先填个link到这里吧：<a href="http://stackoverflow.com/questions/9335169/understanding-strange-java-hash-function">http://stackoverflow.com/questions/9335169/understanding-strange-java-hash-function</a></p>
-
-<p><a href="http://pengranxiang.iteye.com/blog/543893">http://pengranxiang.iteye.com/blog/543893</a></p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">Gson源码分析(一)之Json结构抽象和注解使用</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2015-01-06T22:31:27+08:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>6</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>10:31 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>XML和Json作为最常用的两种网络传输格式而被广泛使用，XML在早期数据传输中作为首选，但是近年来Json以其轻量级和更容易编写和解析而越来越流行，Gson作为google的一个开源Json解析框架提供了稳定和快速解析的功能，可以读读它的源代码了解一番。</p>
+    </p>
+  </footer>
+</article>
 
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2015/01/06/gsonyuan-ma-fen-xi/">展开全文</a>
-    </footer>
-  
 
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/23/android-actionbar/">Android ActionBar</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-12-23T10:58:00+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>23</span><span class='date-suffix'>rd</span>, <span class='date-year'>2014</span></span> <span class='time'>10:58 am</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>ActionBar作为Android3.0系统引入的一个重要的android app的风格，了解它的使用方法是每一个android开发者都必须要掌握的，本文主要基于android官方文档，对一些不常用的内容进行了删减，整理而成。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/12/23/android-actionbar/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/12/19/androidzhi-cai-dan/">Android之菜单</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-12-19T17:19:36+08:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>19</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>5:19 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>本文参考自官方文档：<a href="https://developer.android.com/guide/topics/ui/menus.html">https://developer.android.com/guide/topics/ui/menus.html</a></p>
-
-<p>Android为了维护app之间一个统一的操作习惯，提供了Menus来处理用户和Activity之间的一些交互。但是在不同的系统版本上面推荐的Menu不一样。比如在android 3.0以下，由于Google会要求所有设备生产商提供一个菜单的实体键，所以在3.0一下菜单的主要弹出方式就是点击菜单实体键，弹出6个条目的菜单面板。在3.0以后，引入ActionBar，打开菜单行为转变成点击ActionBar上面的overflow按钮。这两种菜单面板的操作一般都是影响到整个app的操作。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/12/19/androidzhi-cai-dan/">展开全文</a>
-    </footer>
-  
-
-
-    </article>
-  
-  <div class="pagination">
-    
-      <a class="prev" href="/posts/2">&larr; Older</a>
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
-</div>
 <aside class="sidebar">
   
     <section>
@@ -766,6 +495,7 @@ public boolean onInterceptTouchEvent(MotionEvent event) {
 </section>
   
 </aside>
+
 
     </div>
   </div>
